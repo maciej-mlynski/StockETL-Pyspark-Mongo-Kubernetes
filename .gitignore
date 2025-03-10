@@ -1,0 +1,13 @@
+# Ignore most of input data for each data catalog - except for 3MINDIA.csv, 360ONE.csv
+RawStockData/stocks_25_02_05/*
+RawStockData/stocks_25_02_06/*
+RawStockData/stocks_25_02_07/*
+RawStockData/stocks_historical_to_25_02_04/*
+!3MINDIA.csv
+!360ONE.csv
+
+# ignore idea files
+.idea/*
+
+* ignore df file store
+.DS_Store
