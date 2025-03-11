@@ -1,4 +1,4 @@
-from pyspark.sql.types import StructType, StructField, TimestampType, DoubleType, IntegerType
+from schemas.stock_schema import raw_stock_schema
 from pyspark.sql.functions import year, month, input_file_name, regexp_extract, to_date, col, date_format
 import os
 
@@ -8,7 +8,6 @@ class StockETL:
         self.input_folder_path = self.validate_input_folder(input_folder_path)
         self.mode = self.define_mode_base_on_init_value(is_first_run)
         self.spark = spark
-        self.schema = self.input_file_schema()
 
     @staticmethod
     def validate_input_folder(input_folder_path):
@@ -22,23 +21,12 @@ class StockETL:
             return "overwrite"
         return "append"
 
-    @staticmethod
-    def input_file_schema():
-        return StructType([
-            StructField("date", TimestampType(), nullable=True),
-            StructField("open", DoubleType(), nullable=True),
-            StructField("high", DoubleType(), nullable=True),
-            StructField("low", DoubleType(), nullable=True),
-            StructField("close", DoubleType(), nullable=True),
-            StructField("volume", IntegerType(), nullable=True)
-        ])
-
     def read_prepare_input_files(self):
 
         # read files base on provided path
         df = self.spark.read \
             .option("header", "true") \
-            .schema(self.schema) \
+            .schema(raw_stock_schema) \
             .csv(f"{self.input_folder_path}/*")
 
         if df.rdd.isEmpty():
