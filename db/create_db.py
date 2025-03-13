@@ -9,7 +9,10 @@ def create_databases():
     Connects to the MongoDB server and creates two databases:
       - StockDataArtifacts: stores Stock Data artifacts like current row count, start date, end date last_update for given ticker
       - ETLArtifacts: stores ETL artifacts like new tickers founded, missing tickers, gaps after each new ETL run for each new day inserted
-    A dummy document is inserted into a temporary collection to ensure the databases are created.
+      
+    If a database already exists (i.e. it appears in client.list_database_names()),
+    it prints a message indicating that creation is skipped. Otherwise, it creates
+    the database by inserting an initial record into a 'metadata' collection.
     """
     if not check_mongo_server():
         sys.exit(1)
