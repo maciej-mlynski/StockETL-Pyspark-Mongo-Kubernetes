@@ -6,7 +6,7 @@ class StockLoader:
         self.base_path = base_path
         self.schema = final_stock_schema
 
-    def get_data(self, tickers=None, years=None, months=None):
+    def get_data(self, tickers=None, years=None, months=None, col_list=None):
         """
             Loads stock data based on provided filters.
 
@@ -17,10 +17,13 @@ class StockLoader:
                                         If None or empty, data for all years is returned.
                 months (list, optional): List of months (as int or str).
                                          If None or empty, data for all months is returned.
+                col_list (list, optional): A list of column names to select.
+                                        If None, a default list is used.
 
             Returns:
                 DataFrame: Spark sorted DataFrame containing the selected data with columns:
                            "ticker", "date", "time", "open", "high", "low", "close", "volume".
+
             """
         # Use wildcard "*" if no specific filter is provided.
         tickers = tickers if tickers and len(tickers) > 0 else ["*"]
@@ -42,8 +45,14 @@ class StockLoader:
         # Sort data
         stock_df = stock_df.orderBy("ticker", "date", "time")
 
+        # set default column if user did not specify
+        default_columns = ["ticker", "date_time", "date", "time", "open", "high", "low", "close", "volume"]
+
+        # Use the provided columns list if available, otherwise use the default
+        columns_to_select = col_list if col_list is not None else default_columns
+
         # Select only the desired columns.
-        stock_df = stock_df.select("ticker", "date", "time", "open", "high", "low", "close", "volume")
+        stock_df = stock_df.select(*columns_to_select)
         return stock_df
 
     def create_temp_view(self, view_name, tickers=None, years=None, months=None):
