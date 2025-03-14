@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from datetime import datetime, date, timezone
+from datetime import datetime, timezone
 
 
 class StockDataArtifacts:
@@ -17,7 +17,7 @@ class StockDataArtifacts:
         self.db = self.client[db_name]
         self.collection = self.db[collection_name]
 
-    def update_artifacts(self, aggregated_df):
+    def add_first_stock_artifacts(self, aggregated_df):
         """
         Updates the artifacts collection with aggregated data for each ticker.
 
@@ -60,7 +60,7 @@ class StockDataArtifacts:
             # Update the document for this ticker. Upsert = True will insert if the document doesn't exist.
             self.collection.update_one({"ticker": ticker}, update_doc, upsert=True)
 
-        print("Artifacts updated successfully.")
+        print("StockData Artifacts updated successfully.")
 
         # Create an index on the "ticker" field in the StockDataArtifacts collection
         index_result = self.collection.create_index([("ticker", 1)])
@@ -84,3 +84,35 @@ class StockDataArtifacts:
         processed_docs = list(cursor)
         # Build a dictionary: { ticker: newest_date }
         return {doc["ticker"]: doc["latest_date"] for doc in processed_docs}
+
+    def update_stock_artifacts(self, aggregated_df):
+        """
+        """
+        # Collect the aggregated data from Spark DataFrame to a list of Row objects
+        records = aggregated_df.collect()
+
+        for record in records:
+            ticker = record["ticker"]
+            # Collect ticker doc from collection
+            ticker_doc = self.collection.find_one({"ticker": ticker})
+            # Add row count from df to current row count
+            row_count = ticker_doc.get('row_count') + record["row_count"]
+            latest_date = record["latest_date"]
+
+            # Get the current UTC timestamp as a timezone-aware datetime object
+            current_timestamp = datetime.now(timezone.utc)
+
+            # Create the update document
+            update_doc = {
+                "$set": {
+                    "row_count": row_count,
+                    # "oldest_date": oldest_date, - old date stays the same
+                    "latest_date": latest_date,
+                    "last_update_date": current_timestamp
+                }
+            }
+
+            # Update the document for this ticker. Upsert = True will insert if the document doesn't exist.
+            self.collection.update_one({"ticker": ticker}, update_doc, upsert=True)
+
+        print("StockData Artifacts updated successfully.")

@@ -2,19 +2,21 @@ from pyspark.sql.functions import year, month, input_file_name, regexp_extract, 
 from utils.date_transform import extract_date_from_path
 from utils.stock_loader import StockLoader
 from db.stock_data_artifacts import StockDataArtifacts
+from db.etl_artifacts import ETLArtifacts
 from schemas.stock_schema import raw_stock_schema
 import os
 
 
-class StockETL(StockLoader, StockDataArtifacts):
-    def __init__(self, spark, input_folder_path, is_first_run=False):
+class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
+    def __init__(self, spark, input_folder_path, run_id):
         self.input_folder_path = self.validate_input_folder(input_folder_path)
         self.date, self.year, self.month = extract_date_from_path(input_folder_path)
-        self.is_first_run = is_first_run
-        self.mode = self.define_mode_base_on_init_value(is_first_run)
+        self.run_id = run_id
+        self.mode = "append"
         self.spark = spark
         StockLoader.__init__(self, self.spark)
         StockDataArtifacts.__init__(self)
+        ETLArtifacts.__init__(self)
         self.skip_writing = False
 
     @staticmethod
@@ -22,12 +24,6 @@ class StockETL(StockLoader, StockDataArtifacts):
         if os.path.exists(input_folder_path):
             return input_folder_path
         raise Exception(f"Could not find input folder data base on provided path: {input_folder_path}")
-
-    @staticmethod
-    def define_mode_base_on_init_value(is_first_run):
-        if is_first_run:
-            return "overwrite"
-        return "append"
 
     def read_prepare_input_files(self):
         """
@@ -102,6 +98,15 @@ class StockETL(StockLoader, StockDataArtifacts):
         ticker_latest_day_dict = super().export_ticker_data_from_mongo()
         if not ticker_latest_day_dict:
             print('StockDataArtifacts does NOT exist yet. Saving full file...')
+
+            print('Creating first ETL artifacts document...')
+            unique_tickers = [row["ticker"] for row in stock_data.select("ticker").distinct().collect()]
+            super().create_first_etl_art_doc(self.run_id, unique_tickers)
+
+            # Change mode to overwrite
+            self.mode = "overwrite"
+            print("Changing mode to overwrite")
+
             return stock_data
 
         # Compute the minimum (latest) date for each ticker in stock_data.
@@ -133,9 +138,7 @@ class StockETL(StockLoader, StockDataArtifacts):
         # Only keep tickers that require update and new tickers.
         filtered_df = stock_data.filter(~col("ticker").isin(current_list))
 
-        print("Tickers that require update:", update_list)
-        print("New tickers:", new_list)
-        print("Missing tickers:", missing_list)
+        super().update_etl_artifacts(self.run_id, missing_list, new_list, update_list)
 
         if not update_list:
             self.skip_writing = True
@@ -178,20 +181,32 @@ class StockETL(StockLoader, StockDataArtifacts):
                method, which upserts the aggregated data into the MongoDB collection.
                (The update_artifacts() method handles the MongoDB connection and saving of the data.)
         """
-        # If is_first_run -> Load entire table
-        if self.is_first_run:
+        # If self.mode == "overwrite" -> First run -> Load entire table
+        if self.mode == "overwrite":
             df = super().get_data(col_list=['ticker', 'date_time'])
+
+            # Save row_count, start_date, end_date for each ticker in mongo db
+            aggregated_df = df.groupBy("ticker").agg(
+                count("*").alias("row_count"),
+                min("date_time").alias("oldest_date"),
+                max("date_time").alias("latest_date")
+            )
+            super().add_first_stock_artifacts(aggregated_df)
+
+
         # Else -> load only last month data
         else:
             df = super().get_data(years=[self.year], months=[self.month], col_list=['ticker', 'date_time'])
 
-        # Save row_count, start_date, end_date for each ticker in mongo db
-        aggregated_df = df.groupBy("ticker").agg(
-            count("*").alias("row_count"),
-            min("date_time").alias("oldest_date"),
-            max("date_time").alias("latest_date")
-        )
-        super().update_artifacts(aggregated_df)
+            # Save row_count, start_date, end_date for each ticker in mongo db
+            aggregated_df = df.groupBy("ticker").agg(
+                count("*").alias("row_count"),
+                min("date_time").alias("oldest_date"),
+                max("date_time").alias("latest_date")
+            )
+            super().update_stock_artifacts(aggregated_df)
+
+
 
     def run_etl(self):
         stock_data = self.read_prepare_input_files()
@@ -199,5 +214,5 @@ class StockETL(StockLoader, StockDataArtifacts):
         del stock_data
         if not self.skip_writing:
             self.write_partitioned_stock_data(filtered_stock_data)
-            self.create_save_stock_data_artifacts()
+        self.create_save_stock_data_artifacts()
 
