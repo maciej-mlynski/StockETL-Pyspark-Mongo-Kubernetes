@@ -75,5 +75,10 @@ This project implements a robust ETL pipeline for processing stock data using Ap
 
 ## Git and .gitignore
 
-To keep your repository clean and avoid pushing large datasets (which can total over 20GB) to Git, it is highly recommended to use a `.gitignore` file. Ensure that folders containing raw data (`RawStockData`) and transformed data (`StockData`) are excluded from version control. For example, your `.gitignore` file might include:
+To keep the repository clean and avoid pushing large datasets (which can total over 20GB) to Git, a `.gitignore` file is used. The `.gitignore` file excludes folders containing raw and transformed data.
 
+*Note:* Only a few sample files have been committed to the repository for testing purposes. These sample files are located in the `RawStockData` folder:  
+- `RawStockData/stocks_2025_02_05` – daily data sample  
+- `RawStockData/stocks_2025_02_06` – daily data sample  
+- `RawStockData/stocks_2025_02_07` – daily data sample  
+- `RawStockData/stocks_historical_to_2025_02_04` – historical data sample  
