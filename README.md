@@ -1,4 +1,4 @@
-# Performance Comparison: Raw CSV vs. Transformed Parquet Data Aggregation
+# Stock Data ETL Pipeline
 
 ## Overview
 
