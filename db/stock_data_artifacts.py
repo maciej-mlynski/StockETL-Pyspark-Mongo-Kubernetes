@@ -19,7 +19,7 @@ class StockDataArtifacts:
 
     def add_first_stock_artifacts(self, aggregated_df):
         """
-        Updates the artifacts collection with aggregated data for each ticker.
+        Creates initial stock artifacts by upserting aggregated data for each ticker.
 
         Parameters:
             aggregated_df (DataFrame): A Spark DataFrame aggregated by ticker containing:
@@ -60,7 +60,7 @@ class StockDataArtifacts:
             # Update the document for this ticker. Upsert = True will insert if the document doesn't exist.
             self.collection.update_one({"ticker": ticker}, update_doc, upsert=True)
 
-        print("StockData Artifacts updated successfully.")
+        print("Initial stock data artifacts added successfully.")
 
         # Create an index on the "ticker" field in the StockDataArtifacts collection
         index_result = self.collection.create_index([("ticker", 1)])
@@ -72,8 +72,11 @@ class StockDataArtifacts:
 
     def export_ticker_data_from_mongo(self):
         """
-        Queries ticker & oldest_date from the StockDataArtifacts collection and exports the data
-        to a dict
+        Exports ticker data from the StockDataArtifacts collection as a dictionary.
+        Checks if the collection contains any documents; if not, returns an empty dictionary.
+
+        Returns:
+            dict: Mapping of ticker to latest_date.
         """
         # Check if the collection contains any documents
         if self.collection.count_documents({}) == 0:
@@ -87,17 +90,29 @@ class StockDataArtifacts:
 
     def update_stock_artifacts(self, aggregated_df):
         """
+        Updates stock data artifacts by merging new aggregated data with existing data.
+        For each ticker, adds the new row count to the current row count, updates latest_date,
+        and records the current update timestamp.
+
+        Parameters:
+            aggregated_df (DataFrame): Spark DataFrame with columns:
+                - ticker
+                - row_count
+                - latest_date
         """
         # Collect the aggregated data from Spark DataFrame to a list of Row objects
         records = aggregated_df.collect()
 
         for record in records:
             ticker = record["ticker"]
+            row_count = record["row_count"]
+            latest_date = record["latest_date"]
+
             # Collect ticker doc from collection
             ticker_doc = self.collection.find_one({"ticker": ticker})
-            # Add row count from df to current row count
-            row_count = ticker_doc.get('row_count') + record["row_count"]
-            latest_date = record["latest_date"]
+            if ticker_doc:
+                # Add row count from df to current row count
+                row_count = ticker_doc.get('row_count') + record["row_count"]
 
             # Get the current UTC timestamp as a timezone-aware datetime object
             current_timestamp = datetime.now(timezone.utc)

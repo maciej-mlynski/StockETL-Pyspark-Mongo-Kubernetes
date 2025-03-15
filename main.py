@@ -1,13 +1,12 @@
 from pyspark.sql import SparkSession
-from stock_etl import StockETL
-from utils.stock_loader import StockLoader
+from ETL.stock_etl import StockETL
 
 spark = SparkSession.builder.master("local[*]").appName("ETL").getOrCreate()
 sc = spark.sparkContext
 
-# input_folder_path = 'RawStockData/stocks_historical_to_2025_02_04'
-# etl_app1 = StockETL(spark, input_folder_path, run_id=1)
-# etl_app1.run_etl()
+input_folder_path = 'RawStockData/stocks_historical_to_2025_02_04'
+etl_app1 = StockETL(spark, input_folder_path, run_id=2)
+etl_app1.run_etl()
 
 # input_folder_path2 = 'RawStockData/stocks_2025_02_05'
 # etl_app2 = StockETL(spark, input_folder_path2, run_id=2)
@@ -22,3 +21,4 @@ sc = spark.sparkContext
 # result = spark.sql("SELECT ticker, date, time, open, close FROM 2025_01_stocks WHERE close > 150")
 # result.show()
 
+spark.stop()
