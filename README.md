@@ -22,6 +22,13 @@ This project implements a robust ETL pipeline for processing stock data using Ap
   - An optional experiment compares the performance of aggregations on raw CSV data versus transformed Parquet data.
   - Both reading time and aggregation time are measured.
 
+- **API Endpoints:**  
+  The application exposes several RESTful API endpoints for:
+  - Running the ETL process.
+  - Checking MongoDB server status.
+  - Retrieving ETL artifacts.
+  - Comparing performance between raw CSV and transformed Parquet aggregations.
+
 ## Project Structure
 
 - **stock_etl.py:**  
@@ -81,4 +88,41 @@ To keep the repository clean and avoid pushing large datasets (which can total o
 - `RawStockData/stocks_2025_02_05` – daily data sample  
 - `RawStockData/stocks_2025_02_06` – daily data sample  
 - `RawStockData/stocks_2025_02_07` – daily data sample  
-- `RawStockData/stocks_historical_to_2025_02_04` – historical data sample  
+- `RawStockData/stocks_historical_to_2025_02_04` – historical data sample
+
+## API Endpoints
+
+The FastAPI application provides the following endpoints:
+
+- **Root:**  
+  `GET /`  
+  Returns a welcome message.
+
+- **Swagger UI:**  
+  Accessible at `/docs` for interactive API documentation.
+
+- **Check MongoDB Server:**  
+  `GET /check_mongo_sever`  
+  Returns a message indicating whether the MongoDB server is running.
+
+- **Run ETL Process:**  
+  `PUT /api/run_stock_etl`  
+  Triggers the ETL process. Input parameters include the input folder path (for raw CSV files) and run_id. This endpoint initializes a Spark session and runs the ETL process.
+
+- **ETL Artifacts Endpoints:**  
+  Endpoints for retrieving and updating ETL artifacts are available under the `/api` prefix.
+
+- **Performance Comparison:**  
+  `GET /api/compare_performance_between_raw_and_transformed_data`  
+  Measures and returns performance metrics (reading and aggregation times) for raw CSV data and transformed Parquet data as JSON.
+
+- **Get Stock Artifacts by Ticker:**  
+  `GET /api/get_stock_artifacts_by_ticker_name?ticker_name=<ticker>`  
+  Retrieves artifact details for the specified ticker from MongoDB.
+
+## Running the Application
+
+### Prerequisites
+- **Apache Spark:** Ensure Spark is installed and properly configured.
+- **MongoDB:** A MongoDB server (local or cloud-based) must be running.
+- **Python Environment:** Python 3.x with dependencies installed (see `requirements.txt`).
