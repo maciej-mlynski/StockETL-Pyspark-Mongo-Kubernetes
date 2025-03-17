@@ -1,10 +1,8 @@
-from schemas.stock_schema import final_stock_schema
 
 class StockLoader:
     def __init__(self, spark, base_path='StockData'):
         self.spark = spark
         self.base_path = base_path
-        self.schema = final_stock_schema
 
     def get_data(self, tickers=None, years=None, months=None, col_list=None):
         """
@@ -35,6 +33,9 @@ class StockLoader:
         for ticker in tickers:
             for year in years:
                 for month in months:
+                    # There might be a case where user wants to load 01-2020 & 01-2015 (Stock data starts at 02-2015) - let user collect latest available month in 2015
+                    if year == 2015 and month == 1:
+                        month = 2
                     path = f"{self.base_path}/ticker={ticker}/year={year}/month={month}"
                     paths.append(path)
 
