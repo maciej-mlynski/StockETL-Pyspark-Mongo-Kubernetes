@@ -1,30 +1,44 @@
-from pyspark.sql import SparkSession
-from ETL.stock_etl import StockETL
-from utils.stock_loader import StockLoader
-from PerformanceComparsion.performance import PerformanceCheck
-
-# spark = SparkSession.builder.master("local[*]").appName("ETL").getOrCreate()
-# sc = spark.sparkContext
-
-# input_folder_path = 'RawStockData/stocks_historical_to_2025_02_04'
-# etl_app1 = StockETL(spark, input_folder_path, run_id=2)
-# etl_app1.run_etl()
-
-# input_folder_path2 = 'RawStockData/stocks_2025_02_05'
-# etl_app2 = StockETL(spark, input_folder_path2, run_id=2)
-# etl_app2.run_etl()
-
-# loader = StockLoader(spark)
-# df = loader.get_data(tickers=['3MINDIA'], months=[2])
-# print(df.tail(20))
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+import uvicorn
+from db.check_server import check_mongo_server
+from routers.etl import router as etl_router
+from routers.etl_artifacts import router as etl_artifacts_router
+from routers.stock_artifacts import router as stock_artifacts_router
+from routers.performance_compare import router as performance_router
 
 
-# df = loader.create_temp_view(view_name='2025_01_stocks', years=['2025'], months=['1'])
-# result = spark.sql("SELECT ticker, date, time, open, close FROM 2025_01_stocks WHERE close > 150")
-# result.show()
+app = FastAPI(
+    title="Stock ETL API",
+    description="API for managing the Stock ETL process.",
+    version="1.0.0"
+)
+
+@app.get("/", include_in_schema=False)
+async def root_redirect():
+    """
+    Redirects the root URL to the /docs page.
+    """
+    return RedirectResponse(url="/docs")
+
+@app.get("/root")
+async def root():
+    return {"message": "Hello, welcome to the Stock ETL API!"}
 
 
-spark = SparkSession.builder.appName("PerformanceComparison").getOrCreate()
-res = PerformanceCheck(spark).compare()
+@app.get("/check_mongo_sever", tags=["Mongo"])
+async def check_mongo_sever():
+    if check_mongo_server():
+        return {"message": "Mongo server is up and running"}
+    return {"message": "Mongo server is NOT running"}
 
-spark.stop()
+
+# Include the router from the routers folder
+app.include_router(etl_router, prefix="/api", tags=["ETL"])
+app.include_router(etl_artifacts_router, prefix="/api", tags=["Mongo"])
+app.include_router(stock_artifacts_router, prefix="/api", tags=["Mongo"])
+app.include_router(performance_router, prefix="/api", tags=["Additional"])
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

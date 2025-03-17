@@ -1,29 +1,43 @@
-from pyspark.sql.functions import year, month, input_file_name, regexp_extract, to_date, col, date_format, count, min, max
+from pyspark.sql.functions import year, month, input_file_name, regexp_extract, to_date, col, date_format, count, min, max, when
+from pyspark.sql.types import StructType, StructField, TimestampType, DoubleType, IntegerType
 from utils.date_transform import extract_date_from_path
 from utils.stock_loader import StockLoader
 from db.stock_data_artifacts import StockDataArtifacts
 from db.etl_artifacts import ETLArtifacts
-from schemas.stock_schema import raw_stock_schema
 import os
 
 
 class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
-    def __init__(self, spark, input_folder_path, run_id):
+    def __init__(self, spark, input_folder_path):
         self.input_folder_path = self._validate_input_folder(input_folder_path)
+        self.raw_stock_schema = self.define_raw_data_schema()
         self.date, self.year, self.month = extract_date_from_path(input_folder_path)
-        self.run_id = run_id
         self.mode = "append"
         self.spark = spark
         StockLoader.__init__(self, self.spark)
         StockDataArtifacts.__init__(self)
         ETLArtifacts.__init__(self)
         self.skip_writing = False
+        self.tickers_new = []
+        self.api_artifacts = {}
 
     @staticmethod
     def _validate_input_folder(input_folder_path):
         if os.path.exists(input_folder_path):
             return input_folder_path
         raise Exception(f"Input folder not found:: {input_folder_path}")
+
+    @staticmethod
+    def define_raw_data_schema():
+        raw_stock_schema = StructType([
+            StructField("date", TimestampType(), True),
+            StructField("open", DoubleType(), True),
+            StructField("high", DoubleType(), True),
+            StructField("low", DoubleType(), True),
+            StructField("close", DoubleType(), True),
+            StructField("volume", IntegerType(), True)
+        ])
+        return raw_stock_schema
 
     def read_prepare_input_files(self):
         """
@@ -49,12 +63,13 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         # 1. Read CSV files from the input folder.
         df = self.spark.read \
             .option("header", "true") \
-            .schema(raw_stock_schema) \
+            .schema(self.raw_stock_schema) \
             .csv(f"{self.input_folder_path}/*")
 
         # 2. Verify that data was loaded.
         if df.rdd.isEmpty():
             raise Exception(f"The Stock Data in '{self.input_folder_path}' is empty.")
+        self.api_artifacts['LoadingData'] = "Successful"
         print("Stock data loaded successfully with records.")
 
         # 3. Extract ticker from file path.
@@ -95,10 +110,16 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         if not mongo_ticker_dict:
             print('StockDataArtifacts does NOT exist yet. Saving full file...')
             print('Creating first ETL artifacts document...')
+
             unique_tickers = [row["ticker"] for row in stock_data.select("ticker").distinct().collect()]
-            super().create_first_etl_art_doc(self.run_id, unique_tickers)
-            self.mode = "overwrite"
+            super().create_first_etl_art_doc(unique_tickers)
             print("Changing mode to overwrite")
+            self.mode = "overwrite"
+
+            # Add details in etl artifacts
+            self.api_artifacts["ETLArtifacts"] = "First artifacts created successfully"
+            self.api_artifacts["run_id"] = self.run_id
+
             return stock_data
 
         # Compute the maximum (latest) date for each ticker in stock_data.
@@ -112,8 +133,8 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         tickers_df = set(df_latest_dates_dict.keys())
         tickers_mongo = set(mongo_ticker_dict.keys())
 
-        # New tickers: present in stock_data but not in MongoDB.
-        tickers_new = list(tickers_df - tickers_mongo)
+        # New tickers: present in stock_data but not in MongoDB. Add it as global -> will be used later
+        self.tickers_new = list(tickers_df - tickers_mongo)
 
         # Missing tickers: present in MongoDB but not in stock_data.
         tickers_missing = list(tickers_mongo - tickers_df)
@@ -132,12 +153,17 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         # Filter out current tickers from stock_data.
         filtered_df = stock_data.filter(~col("ticker").isin(tickers_current))
 
-        if not tickers_update and not tickers_new:
+        if not tickers_update and not self.tickers_new:
             self.skip_writing = True
             print("Data is up-to-date. Skipping write...")
+            self.api_artifacts["WritingMode"] = "Data already up-to date. Write skipped"
+        else:
+            self.api_artifacts["WritingMode"] = self.mode
 
         # Update ETL artifacts with classification results.
-        super().update_etl_artifacts(self.run_id, tickers_missing, tickers_new, tickers_update, self.skip_writing)
+        super().update_etl_artifacts(tickers_missing, self.tickers_new, tickers_update, self.skip_writing)
+        self.api_artifacts["ETLArtifacts"] = "ETL Artifacts added successfully"
+        self.api_artifacts["run_id"] = self.run_id
 
         return filtered_df
 
@@ -150,6 +176,7 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
             print("Data successfully saved to StockData folder")
         except Exception as e:
             raise Exception(f"Could not save data in StockData. ERROR: {e}")
+        self.api_artifacts['WritingData'] = "Successful"
 
     def create_save_stock_data_artifacts(self):
         """
@@ -179,24 +206,27 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         if self.mode == "overwrite":
             df = super().get_data(col_list=['ticker', 'date_time'])
 
-            # Save row_count, start_date, end_date for each ticker in mongo db
+            # Save row_count, oldest_date, latest_date for each ticker in mongo db
             aggregated_df = df.groupBy("ticker").agg(
                 count("*").alias("row_count"),
                 min("date_time").alias("oldest_date"),
                 max("date_time").alias("latest_date")
             )
             super().add_first_stock_artifacts(aggregated_df)
+            self.api_artifacts['StockDataArtifacts'] = "First artifacts created successfully"
+
         # Else -> load only last month data
         else:
             df = super().get_data(years=[self.year], months=[self.month], col_list=['ticker', 'date_time'])
 
-            # Save row_count, start_date, end_date for each ticker in mongo db
+            # Save row_count, latest_date & oldest_date (only for new tickers) for each ticker in mongo db
             aggregated_df = df.groupBy("ticker").agg(
                 count("*").alias("row_count"),
-                min("date_time").alias("oldest_date"),
-                max("date_time").alias("latest_date")
+                max("date_time").alias("latest_date"),
+                min(when(col("ticker").isin(self.tickers_new), col("date_time"))).alias("oldest_date")
             )
             super().update_stock_artifacts(aggregated_df)
+            self.api_artifacts['StockDataArtifacts'] = "Artifacts updated successfully"
 
 
     def run_etl(self):
@@ -212,3 +242,5 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         if not self.skip_writing:
             self.write_partitioned_stock_data(stock_data)
         self.create_save_stock_data_artifacts()
+
+        return [self.api_artifacts]

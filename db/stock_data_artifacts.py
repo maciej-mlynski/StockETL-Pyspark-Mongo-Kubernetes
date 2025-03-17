@@ -108,26 +108,42 @@ class StockDataArtifacts:
             row_count = record["row_count"]
             latest_date = record["latest_date"]
 
+            # Get the current UTC timestamp as a timezone-aware datetime object
+            current_timestamp = datetime.now(timezone.utc)
+
             # Collect ticker doc from collection
             ticker_doc = self.collection.find_one({"ticker": ticker})
             if ticker_doc:
                 # Add row count from df to current row count
                 row_count = ticker_doc.get('row_count') + record["row_count"]
-
-            # Get the current UTC timestamp as a timezone-aware datetime object
-            current_timestamp = datetime.now(timezone.utc)
-
-            # Create the update document
-            update_doc = {
-                "$set": {
-                    "row_count": row_count,
-                    # "oldest_date": oldest_date, - old date stays the same
-                    "latest_date": latest_date,
-                    "last_update_date": current_timestamp
+                # Create the update document
+                update_doc = {
+                    "$set": {
+                        "row_count": row_count,
+                        "latest_date": latest_date,
+                        "last_update_date": current_timestamp
+                    }
                 }
-            }
+            # If ticker does not exist in mongo add oldest_date also
+            else:
+                update_doc = {
+                    "$set": {
+                        "row_count": row_count,
+                        "latest_date": latest_date,
+                        "oldest_date": record["oldest_date"],
+                        "last_update_date": current_timestamp
+                    }
+                }
 
             # Update the document for this ticker. Upsert = True will insert if the document doesn't exist.
             self.collection.update_one({"ticker": ticker}, update_doc, upsert=True)
 
         print("StockData Artifacts updated successfully.")
+
+    def get_stock_artifacts_by_ticker_name(self, ticker_name):
+        # Check if the collection contains any documents
+        if self.collection.count_documents({}) == 0:
+            print("Collection is empty or does not exist.")
+            return {}
+        # Get processed tickers from MongoDB by ticker name
+        return self.collection.find_one({"ticker": ticker_name})
