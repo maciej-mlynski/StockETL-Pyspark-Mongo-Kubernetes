@@ -22,8 +22,8 @@ def check_mongo_server(mongo_uri="mongodb://localhost:27017/", timeout_ms=3000):
         print("MongoDB server is running.")
         return True
     except ServerSelectionTimeoutError:
-        print("MongoDB server is not running. Please start the server.")
-        return False
+        raise Exception(f"MongoDB server is not running. Please start the server")
+
 
 
 # Example usage in your main script

@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 from datetime import datetime, timezone
+from db.check_server import check_mongo_server
 
 
 class StockDataArtifacts:
@@ -13,6 +14,7 @@ class StockDataArtifacts:
             db_name (str): The database name where artifacts are stored.
             collection_name (str): The collection name for the artifacts.
         """
+        check_mongo_server()
         self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.collection = self.db[collection_name]

@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 from datetime import datetime, timezone
+from db.check_server import check_mongo_server
 
 
 class ETLArtifacts:
@@ -13,6 +14,7 @@ class ETLArtifacts:
             db_name (str): Name of the MongoDB database.
             collection_name (str): Collection name for ETL artifacts.
         """
+        check_mongo_server()
         self.client = MongoClient(mongo_uri)
         self.etl_db = self.client[db_name]
         self.etl_collection = self.etl_db[collection_name]
