@@ -18,11 +18,6 @@ class TimeFrame(str, Enum):
     PastYear = "PastYear"         # One-year period ending with target date
     HistoricalToDate = "HistoricalToDate"  # From inception to target date
 
-class TopStocksSchema(BaseModel):
-    Date: str
-    Time: Optional[str]
-    NumOfStocksToDisplay: Optional[int]
-
 
 @router.get("/get_top_stocks")
 async def get_top_stocks(time_frame: TimeFrame, target_date: date = '2020-01-01', optional_time: Optional[time] = None, num_of_stocks_to_display: Optional[int] = None):
