@@ -2,7 +2,6 @@ from pyspark.sql import SparkSession
 from reports.top_stocks import TopStocksApp
 from fastapi import APIRouter, HTTPException
 from datetime import date, time
-from pydantic import BaseModel
 from typing import Optional
 from enum import Enum
 import json
