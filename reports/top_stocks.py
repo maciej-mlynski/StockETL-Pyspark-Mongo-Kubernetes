@@ -110,6 +110,11 @@ class TopStocksApp(StockLoader):
             target_date_time = datetime.combine(target_date, target_time)
             data = data.filter(col("date_time") <= target_date_time)
 
+        if data.rdd.isEmpty():
+            if target_date.weekday() >= 5:
+                raise ValueError("target_date cannot be a weekend because stocks are not traded on weekends")
+            raise Exception(f"No trading data available for {target_date}. It might be a holiday or a gap in the data.")
+
         # Compute boundary timestamps (first and last date_time for each ticker)
         time_bounds = data.groupBy("ticker").agg(
             min("date_time").alias("first_dt"),
