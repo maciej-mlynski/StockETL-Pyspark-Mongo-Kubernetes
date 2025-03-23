@@ -4,9 +4,10 @@ services:
   spark-master:
     container_name: spark-master
     build:
-      context: .
-      dockerfile: Dockerfile
-    entrypoint: ["./entrypoint.sh", "master"]
+      context: ..
+      dockerfile: stock_docker/Dockerfile
+    image: stock-etl-spark-master:latest
+    entrypoint: ["/app/entrypoint.sh", "master"]
     environment:
       - SPARK_MASTER_HOST=spark-master
       - SPARK_MASTER_PORT=7077
@@ -19,9 +20,10 @@ services:
 
   spark-worker:
     build:
-      context: .
-      dockerfile: Dockerfile
-    entrypoint: ["./entrypoint.sh", "worker"]
+      context: ..
+      dockerfile: stock_docker/Dockerfile
+    image: stock-etl-spark-worker:latest
+    entrypoint: ["/app/entrypoint.sh", "worker"]
     depends_on:
       - spark-master
     environment:
@@ -33,9 +35,10 @@ services:
   spark-history:
     container_name: spark-history
     build:
-      context: .
-      dockerfile: Dockerfile
-    entrypoint: ["./entrypoint.sh", "history"]
+      context: ..
+      dockerfile: stock_docker/Dockerfile
+    image: stock-etl-spark-history:latest
+    entrypoint: ["/app/entrypoint.sh", "history"]
     depends_on:
       - spark-master
     environment:
@@ -48,8 +51,9 @@ services:
   app:
     container_name: stock-etl-api
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: stock_docker/Dockerfile
+    image: stock-etl-app:latest
     depends_on:
       - spark-master
       - mongo

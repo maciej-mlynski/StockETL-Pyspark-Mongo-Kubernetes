@@ -14,7 +14,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies (for Jupyter and others if needed)
-COPY requirements.txt .
+COPY stock_docker/requirements.txt .
 RUN pip3 install -r requirements.txt
 
 # Set environment variables for Spark
@@ -34,14 +34,14 @@ RUN mkdir -p ${SPARK_HOME} \
 RUN mkdir -p ${SPARK_HOME}/spark-events
 
 # Copy spark configuration file
-COPY spark-defaults.conf "$SPARK_HOME/conf"
+COPY stock_docker/spark-defaults.conf "$SPARK_HOME/conf"
 ENV PATH="/opt/spark/sbin:/opt/spark/bin:${PATH}"
 
 RUN chmod u+x /opt/spark/sbin/* && \
     chmod u+x /opt/spark/bin/*
 
 # Copy entrypoint.sh into /app and make it executable
-COPY entrypoint.sh /app/entrypoint.sh
+COPY stock_docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Stage 2: Build final image with application code
@@ -53,11 +53,11 @@ WORKDIR /app
 RUN mkdir -p ${SPARK_HOME}/spark-events
 
 # Copy and install Python dependencies
-COPY requirements.txt .
+COPY stock_docker/requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Copy all project files into /app
-COPY . .
+COPY .. .
 
 # Expose the FastAPI port
 EXPOSE 8000
