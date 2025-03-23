@@ -14,7 +14,7 @@ async def run_stock_etl(params: ETLParams):
 
     try:
         # Init spark Session & Spark context
-        spark = SparkSession.builder.master("local[*]").appName("ETL").getOrCreate()
+        spark = SparkSession.builder.appName("ETL").getOrCreate()
 
         # Run ETL script
         etl_app = StockETL(spark, params.input_folder_path)

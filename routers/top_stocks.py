@@ -23,7 +23,7 @@ async def get_top_stocks(time_frame: TimeFrame, target_date: date = '2020-01-01'
 
     try:
         # Init spark Session & Spark context
-        spark = SparkSession.builder.master("local[*]").appName("TopStocks").getOrCreate()
+        spark = SparkSession.builder.appName("TopStocks").getOrCreate()
 
         # Run ETL script
         top_stocks_app = TopStocksApp(spark)

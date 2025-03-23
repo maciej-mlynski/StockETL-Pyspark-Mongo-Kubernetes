@@ -4,11 +4,7 @@ RawStockData/stocks_2025_02_06/*
 RawStockData/stocks_2025_02_07/*
 RawStockData/stocks_historical_to_2025_02_04/*
 StockData/*
-!3MINDIA.csv
-!360ONE.csv
 
-# Ignore idea files
-.idea/*
 
-# Ignore df file store
-.DS_Store
+# Ignore venv
+.venv/

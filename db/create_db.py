@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from datetime import datetime
 from check_server import check_mongo_server
-import sys
+import sys, os
 
 
 def create_databases():
@@ -18,7 +18,7 @@ def create_databases():
         sys.exit(1)
 
     # Connect to MongoDB server (adjust the URI as needed)
-    client = MongoClient("mongodb://localhost:27017/")
+    client = MongoClient(os.environ.get("MONGO_URI", "mongodb://localhost:27017/"))
 
     # Access the databases (they will be created when data is inserted)
     stock_data_db = client["StockDB"]

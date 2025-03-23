@@ -1,10 +1,11 @@
 from pymongo import MongoClient
 from datetime import datetime, timezone
 from db.check_server import check_mongo_server
+import os
 
 
 class ETLArtifacts:
-    def __init__(self, mongo_uri="mongodb://localhost:27017/", db_name="StockDB",
+    def __init__(self, mongo_uri=os.environ.get("MONGO_URI", "mongodb://localhost:27017/"), db_name="StockDB",
                  collection_name="ETLArtifacts"):
         """
         Initializes the ETLArtifacts class.

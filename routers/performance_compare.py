@@ -9,7 +9,7 @@ async def compare_performance_between_raw_and_transformed_data():
 
     try:
         # Init spark Session & Spark context
-        spark = SparkSession.builder.master("local[*]").appName("ETL").getOrCreate()
+        spark = SparkSession.builder.appName("ETL").getOrCreate()
 
         # Run ETL script
         performance_app = PerformanceCheck(spark)
