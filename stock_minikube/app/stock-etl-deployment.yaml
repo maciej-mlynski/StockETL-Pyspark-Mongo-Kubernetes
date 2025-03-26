@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stock-etl-deployment
+  namespace: stock-etl-namespace
+  labels:
+    app: stock-etl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-etl
+  template:
+    metadata:
+      labels:
+        app: stock-etl
+    spec:
+      containers:
+      - name: stock-etl-container
+        image: stock-etl-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8000
+        env:
+          - name: MONGO_URI
+            value: "mongodb://mongo-service:27017/"
+          - name: MINIO_HOST
+            value: "minio-service.minio-dev.svc.cluster.local"
+          - name: MINIO_PORT
+            value: "6544"
+          - name: MINIO_ACCESS_KEY
+            value: "minio"
+          - name: MINIO_SECRET_KEY
+            value: "minio123"

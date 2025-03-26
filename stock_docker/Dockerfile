@@ -34,11 +34,11 @@ RUN mkdir -p ${SPARK_HOME} \
 RUN mkdir -p ${SPARK_HOME}/spark-events
 
 # Copy spark configuration file
-COPY stock_docker/spark-defaults.conf "$SPARK_HOME/conf"
-ENV PATH="/opt/spark/sbin:/opt/spark/bin:${PATH}"
+#COPY stock_docker/spark-defaults.conf "$SPARK_HOME/conf"
+#ENV PATH="/opt/spark/sbin:/opt/spark/bin:${PATH}"
 
-RUN chmod u+x /opt/spark/sbin/* && \
-    chmod u+x /opt/spark/bin/*
+#RUN chmod u+x /opt/spark/sbin/* && \
+#    chmod u+x /opt/spark/bin/*
 
 # Copy entrypoint.sh into /app and make it executable
 COPY stock_docker/entrypoint.sh /app/entrypoint.sh
