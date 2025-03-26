@@ -1,128 +1,127 @@
-# Stock Data ETL Pipeline
+# Project Installation & Deployment
 
-## Overview
+Below are the steps required to run this application, which consists of:
+- A **MinIO** instance for storing raw data (S3-compatible object storage).
+- A **MongoDB** instance for database storage.
+- A **FastAPI** application that interacts with both MongoDB and MinIO.
 
-This project implements a robust ETL pipeline for processing stock data using Apache Spark and MongoDB. The pipeline includes the following key functionalities:
+---
 
-- **Data Ingestion & Transformation:**
-  - Reads raw CSV files from the `RawStockData` folder using a predefined schema.
-  - Extracts the ticker from the filename.
-  - Converts and splits date-time information (e.g., renames `date` to `date_time` and creates separate `date` and `time` columns).
-  - Extracts partitioning information (year and month) from the date.
+## Prerequisites
 
-- **Data Validation & Artifact Management:**
-  - Validates the transformed stock data against artifacts stored in MongoDB.
-  - Classifies tickers as new, missing, or requiring updates.
-  - Updates MongoDB collections (`StockDataArtifacts` and `ETLArtifacts`) with aggregated metadata such as record counts and date ranges.
+1. **Minikube**  
+   Install following the official guide:  
+   [https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew)
 
-- **Data Loading:**
-  - Writes the validated and transformed data to a partitioned Parquet store in the `StockData` folder.
+2. **Docker**  
+   [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
 
-- **Performance Comparison:**
-  - An optional experiment compares the performance of aggregations on raw CSV data versus transformed Parquet data.
-  - Both reading time and aggregation time are measured.
+3. **mc (MinIO Client)** for manual data uploads
 
-- **API Endpoints:**  
-  The application exposes several RESTful API endpoints for:
-  - Running the ETL process.
-  - Checking MongoDB server status.
-  - Retrieving ETL artifacts.
-  - Comparing performance between raw CSV and transformed Parquet aggregations.
+    Install via Homebrew (on macOS):
+    
+    ```
+    brew install minio/stable/mc
+    ```
 
-## Project Structure
+---
 
-- **stock_etl.py:**  
-  Contains the `StockETL` class that orchestrates the full ETL process by extending functionality from `StockLoader`, `StockDataArtifacts`, and `ETLArtifacts`.
+## Deploying MinIO
 
-- **date_transform.py:**  
-  Provides the `extract_date_from_path` utility to extract date information from folder names.
+1. **Start Minikube**:
+    
+    ```
+    minikube start
+    ```
 
-- **stock_loader.py:**  
-  Implements the `StockLoader` class for reading stock data from Parquet files, with filtering and temporary view creation support.
+2. **Make the MinIO deploy script executable**:
+    
+    ```
+    chmod +x deploy_minio.sh
+    ```
 
-- **etl_artifacts.py:**  
-  Manages ETL artifacts in MongoDB, including run metadata and ticker classification.
+3. **Deploy MinIO**:
+    
+    ```
+    ./deploy_minio.sh
+    ```
 
-- **stock_data_artifacts.py:**  
-  Manages stock data artifacts in MongoDB, updating aggregated data (e.g., record count, date ranges) for each ticker.
+4. **Access MinIO**:
+    
+    ```
+    minikube service minio-service -n minio-dev
+    ```
 
-- **check_server.py:**  
-  Contains a utility function to verify that the MongoDB server is running.
+5. **Configure MinIO Client (`mc`)**:
 
-- **create_db.py:**  
-  A script to create the necessary MongoDB databases and collections if they don't already exist.
-
-- **main.py:**  
-  The main entry point that runs the full ETL process, including data reading, validation, writing, and artifact updates.
-
-- **performance_comparison.py:**  
-  (Optional) Compares performance metrics between aggregations on raw CSV data and transformed Parquet data.
-
-## Setup and Execution
-
-### Prerequisites
-
-- **Apache Spark:**  
-  Ensure that Spark is installed and properly configured.
-
-- **MongoDB:**  
-  Either run a local MongoDB server or use a MongoDB Atlas cluster. Verify connectivity using `check_server.py`.
-
-- **Python Environment:**  
-  Python 3.x and required dependencies (listed in `requirements.txt`).
-
-### Installation
-
-1. Clone the repository.
-2. Create and activate a virtual environment.
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
+   For example:
+   
+    ```
+    mc alias set myminio <TARGET_PORT_URL> <USER_NAME> <PASSWORD>
+    ```
+    
+   Where `TARGET_PORT_URL` is the port that Minikube shows after running `minikube service`.
+   Unless you change anything your credentials are username: minio, password: minio123
 
 
-## Git and .gitignore
+6. **Create a bucket**:
+    
+    ```
+    mc mb myminio/rawstockdata
+    ```
 
-To keep the repository clean and avoid pushing large datasets (which can total over 20GB) to Git, a `.gitignore` file is used. The `.gitignore` file excludes folders containing raw and transformed data.
+7. **Upload data**:
+    
+    ```
+    mc cp --recursive <LOCAL_FOLDER_PATH> myminio/rawstockdata
+    ```
 
-*Note:* Only a few sample files have been committed to the repository for testing purposes. These sample files are located in the `RawStockData` folder:  
-- `RawStockData/stocks_2025_02_05` – daily data sample  
-- `RawStockData/stocks_2025_02_06` – daily data sample  
-- `RawStockData/stocks_2025_02_07` – daily data sample  
-- `RawStockData/stocks_historical_to_2025_02_04` – historical data sample
+8. **Create another bucket**:
+    
+    ```
+    mc mb myminio/stockdata
+    ```
 
-## API Endpoints
+---
 
-The FastAPI application provides the following endpoints:
+## Deploying the FastAPI App (with Mongo)
 
-- **Root:**  
-  `GET /`  
-  Returns a welcome message.
+1. **Start (or ensure Minikube is running)**:
+    
+    ```
+    minikube start
+    ```
 
-- **Swagger UI:**  
-  Accessible at `/docs` for interactive API documentation.
+2. **Make the app deploy script executable**:
+    
+    ```
+    chmod +x deploy_app.sh
+    ```
 
-- **Check MongoDB Server:**  
-  `GET /check_mongo_sever`  
-  Returns a message indicating whether the MongoDB server is running.
+3. **Deploy the app**:
+    
+    ```
+    ./deploy_app.sh
+    ```
 
-- **Run ETL Process:**  
-  `PUT /api/run_stock_etl`  
-  Triggers the ETL process. Input parameters include the input folder path (for raw CSV files) and run_id. This endpoint initializes a Spark session and runs the ETL process.
+4. **Check the FastAPI logs**:
+    
+    ```
+    kubectl logs deployment/stock-etl-deployment -n stock-etl-namespace
+    ```
 
-- **ETL Artifacts Endpoints:**  
-  Endpoints for retrieving and updating ETL artifacts are available under the `/api` prefix.
+5. **Access the FastAPI service via Minikube**:
+    
+    ```
+    minikube service stock-etl-service -n stock-etl-namespace
+    ```
 
-- **Performance Comparison:**  
-  `GET /api/compare_performance_between_raw_and_transformed_data`  
-  Measures and returns performance metrics (reading and aggregation times) for raw CSV data and transformed Parquet data as JSON.
+---
 
-- **Get Stock Artifacts by Ticker:**  
-  `GET /api/get_stock_artifacts_by_ticker_name?ticker_name=<ticker>`  
-  Retrieves artifact details for the specified ticker from MongoDB.
+## Current Features & Future Plans
 
-## Running the Application
+Currently, the application can:
+- Check MongoDB server status.
+- Read from and write data to S3 (MinIO).
 
-### Prerequisites
-- **Apache Spark:** Ensure Spark is installed and properly configured.
-- **MongoDB:** A MongoDB server (local or cloud-based) must be running.
-- **Python Environment:** Python 3.x with dependencies installed (see `requirements.txt`).
+In the near future, **full API functionality** will be provided by adding a Spark Operator on Kubernetes, enabling advanced data processing features.
