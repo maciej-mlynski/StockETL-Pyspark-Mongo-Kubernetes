@@ -12,13 +12,13 @@
 2. **Make the MinIO deploy script executable**:
     
     ```
-    chmod +x deploy_minio.sh
+    chmod +x deployment/deploy_minio.sh
     ```
 
 3. **Deploy MinIO**:
     
     ```
-    ./deploy_minio.sh
+    ./deployment/deploy_minio.sh
     ```
 
 4. **Access MinIO**:
@@ -67,13 +67,13 @@
 2. **Make the spark deploy script executable**:
     
     ```
-    chmod +x deploy_spark.sh
+    chmod +x deployment/deploy_spark.sh
     ```
 
 3. **Deploy the spark cluster**:
     
     ```
-    ./deploy_spark.sh
+    ./deployment/deploy_spark.sh
     ```
 
 ---
@@ -88,13 +88,13 @@
 2. **Make the app deploy script executable**:
     
     ```
-    chmod +x deploy_app.sh
+    chmod +x deployment/deploy_app.sh
     ```
 
 3. **Deploy the app**:
     
     ```
-    ./deploy_app.sh
+    ./deployment/deploy_app.sh
     ```
 
 4. **Access the FastAPI service via Minikube**:
