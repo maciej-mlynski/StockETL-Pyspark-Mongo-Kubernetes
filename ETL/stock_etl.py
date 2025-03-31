@@ -169,7 +169,7 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         path = "s3a://stockdata/data/"
         try:
             stock_data.write.partitionBy("ticker", "year", "month") \
-                .option("header", "true").mode("overwrite").parquet(path)
+                .option("header", "true").mode(self.mode).parquet(path)
             print("Data successfully saved to StockData folder")
         except Exception as e:
             raise Exception(f'Could not save data in {path}. ERROR: {e}')
