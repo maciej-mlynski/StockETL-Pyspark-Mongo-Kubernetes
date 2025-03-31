@@ -55,14 +55,16 @@ Below are the steps required to run this application, which consists of:
 ---
 ## Upload RawStockData to Minio
 1. **Change full data loading file mode**:
-    
     ```
     chmode -x load_raw_data_minio.sh
     ```
 2. **Perform full deployment**:
-    
     ```
     ./load_raw_data_minio.sh
+    ```
+3. **In order top see MinIO UI run in terminal**
+   ```
+    minikube service minio-service -n minio-dev
     ```
 
 ---

@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.put("/run_stock_etl")
-async def run_stock_etl(input_folder_path: str='stocks_2025_02_05'):
+async def run_stock_etl(input_folder_path: str='stocks_historical_to_2025_02_04'):
 
     try:
         # Build spark session
