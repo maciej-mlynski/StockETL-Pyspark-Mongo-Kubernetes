@@ -7,7 +7,7 @@ from routers.etl_artifacts import router as etl_artifacts_router
 from routers.stock_artifacts import router as stock_artifacts_router
 from routers.test_endpoints import router as test_routers
 # from routers.performance_compare import router as performance_router
-# from routers.top_stocks import router as top_stocks_router
+from routers.top_stocks import router as top_stocks_router
 
 
 app = FastAPI(
@@ -40,7 +40,7 @@ app.include_router(etl_router, prefix="/api", tags=["ETL"])
 app.include_router(etl_artifacts_router, prefix="/api", tags=["Mongo"])
 app.include_router(stock_artifacts_router, prefix="/api", tags=["Mongo"])
 app.include_router(test_routers, prefix="/api", tags=["TestEndpoints"])
-# app.include_router(top_stocks_router, prefix="/api", tags=["Reports"])
+app.include_router(top_stocks_router, prefix="/api", tags=["Reports"])
 # app.include_router(performance_router, prefix="/api", tags=["Reports"])
 
 
