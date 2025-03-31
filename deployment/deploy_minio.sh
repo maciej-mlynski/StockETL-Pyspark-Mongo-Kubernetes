@@ -17,10 +17,10 @@ kubectl delete pv minio-volume-0 --ignore-not-found
 kubectl delete pv minio-volume-1 --ignore-not-found
 
 echo "Applying Persistent Volume (PV)..."
-kubectl apply -f stock_minikube/minio/minio-pv.yaml -n minio-dev
+kubectl apply -f minikube/minio/minio-pv.yaml -n minio-dev
 
 echo "Applying Persistent Volume Claim (PVC)..."
-kubectl apply -f stock_minikube/minio/minio-pvclaim.yaml -n minio-dev
+kubectl apply -f minikube/minio/minio-pvclaim.yaml -n minio-dev
 
 # Secret
 # The secret key is set to "minio123". Feel free to change the value in the minio-secret.yaml file.
@@ -29,18 +29,18 @@ encoded_secret=$(echo -n 'minio123' | base64)
 echo "Encoded password: $encoded_secret"
 
 echo "Applying Secret..."
-kubectl apply -f stock_minikube/minio/minio-secret.yaml -n minio-dev
+kubectl apply -f minikube/minio/minio-secret.yaml -n minio-dev
 
 # Deploy Minio
 # Deploy the StatefulSet, headless service, and service for Minio.
 echo "Deploying Minio StatefulSet..."
-kubectl apply -f stock_minikube/minio/minio-sts.yaml -n minio-dev
+kubectl apply -f minikube/minio/minio-sts.yaml -n minio-dev
 
 echo "Deploying Minio headless service..."
-kubectl apply -f stock_minikube/minio/minio-headless-service.yaml -n minio-dev
+kubectl apply -f minikube/minio/minio-headless-service.yaml -n minio-dev
 
 echo "Deploying Minio service..."
-kubectl apply -f stock_minikube/minio/minio-service.yaml -n minio-dev
+kubectl apply -f minikube/minio/minio-service.yaml -n minio-dev
 
 # Optionally add a DNS entry to use the hostname minio.kubernetes.net
 echo "If you want to use DNS, run the following command:"
