@@ -25,121 +25,90 @@ Below are the steps required to run this application, which consists of:
     ```
 
 ---
-
-## Deploying MinIO
-
-1. **Start Minikube**:
+## Deploy FastApi, MinIO, Mongo & spark to kubernetes
+1. **Change full deployment file mode**:
     
     ```
-    minikube start
+    chmode -x deploy_all.sh
     ```
-
-2. **Make the MinIO deploy script executable**:
+2. **Perform full deployment**:
     
     ```
-    chmod +x deploy_minio.sh
+    ./deploy_all.sh
     ```
+3. **Check if all 3 pods are running**
+    
+   a) App & Mongo
+   ```
+    kubectl get pods -n stock-etl-namespace
+    ```
+   b) Spark
+   ```
+    kubectl get pods -n spark-namespace
+    ```
+   c) Minio
+    ```
+    kubectl get pods -n minio-dev
+    ```
+* You can deploy each component separately following README.md in `deployment/README.md`
 
-3. **Deploy MinIO**:
+
+## Upload RawStockData to Minio
+1. **Change full data loading file mode**:
     
     ```
-    ./deploy_minio.sh
+    chmode -x load_raw_data_minio.sh
     ```
-
-4. **Access MinIO**:
+2. **Perform full deployment**:
     
     ```
-    minikube service minio-service -n minio-dev
+    ./load_raw_data_minio.sh
     ```
-
-5. **Configure MinIO Client (`mc`)**:
-
-   For example:
-   
-    ```
-    mc alias set myminio <TARGET_PORT_URL> <USER_NAME> <PASSWORD>
-    ```
-    
-   Where `TARGET_PORT_URL` is the port that Minikube shows after running `minikube service`.
-   Unless you change anything your credentials are username: minio, password: minio123
-
-
-6. **Create a bucket**:
-    
-    ```
-    mc mb myminio/rawstockdata
-    ```
-
-7. **Upload data**:
-    
-    ```
-    mc cp --recursive <LOCAL_FOLDER_PATH> myminio/rawstockdata
-    ```
-
-8. **Create another bucket for ETL output**:
-    
-    ```
-    mc mb myminio/stockdata
-    ```
-
----
-## Deploying Spark cluster
-1. **Start (or ensure Minikube is running)**:
-    
-    ```
-    minikube start
-    ```
-2. **Make the spark deploy script executable**:
-    
-    ```
-    chmod +x deploy_spark.sh
-    ```
-
-3. **Deploy the spark cluster**:
-    
-    ```
-    ./deploy_spark.sh
-    ```
-
----
-## Deploying the FastAPI App (with Mongo)
-
-1. **Start (or ensure Minikube is running)**:
-    
-    ```
-    minikube start
-    ```
-
-2. **Make the app deploy script executable**:
-    
-    ```
-    chmod +x deploy_app.sh
-    ```
-
-3. **Deploy the app**:
-    
-    ```
-    ./deploy_app.sh
-    ```
-
-4. **Access the FastAPI service via Minikube**:
-    
-    ```
-    minikube service stock-etl-service -n stock-etl-namespace
-    ```
-5. **Check the FastAPI logs while running app**:
-    
-    ```
-    kubectl logs deployment/stock-etl-deployment -n stock-etl-namespace
-    ```
-
----
 
 ## Current Features & Future Plans
 
 Currently, the application can:
 - Check MongoDB server status.
 - Read from and write data to S3 (MinIO).
+- Use spark cluster in ETL process (read & write s3 data & perform transformations)
+
+In the near future, **full API functionality** will be provided by adding report scrips: top_stocks, performance_compare.
+
+
+## Running ETL API
+1. **In order to run API you should first start the Kubernetes App**
+    ```
+    minikube service stock-etl-service -n stock-etl-namespace
+    ```
+2. **Open stock-etl-service (2nd url in terminal)**
+3. **You should be able to see the Swagger UI with all available APIs**
+4. **Find ETL api**
+   ```
+    api/run_stock_etl
+    ```
+5. **Select the input folder name or use default one:** `stocks_historical_to_2025_02_04`
+6. **Click - execute**
+
+## Spark cluster check
+1. **In order to get to Spark UI you MUST first forward the port via terminal**
+   ```
+    kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
+    ```
+2. **Then just open the url in you web browser**
+   ```
+    127.0.0.1:8080
+    ```
+3. **In the UI you can check:**
+   - Available workers & their resources
+   - Running Apps
+   - Completed runs
+
+
+## Current Features & Future Plans
+
+Currently, the application can:
+- Check MongoDB server status.
+- Read from and write data to S3 (MinIO) & Mongo DB.
 - Use spark cluster in ETL process (read & write s3 data & perform transformations)
 
 In the near future, **full API functionality** will be provided by adding report scrips: top_stocks, performance_compare.
