@@ -76,14 +76,32 @@ Below are the steps required to run this application, which consists of:
     mc cp --recursive <LOCAL_FOLDER_PATH> myminio/rawstockdata
     ```
 
-8. **Create another bucket**:
+8. **Create another bucket for ETL output**:
     
     ```
     mc mb myminio/stockdata
     ```
 
 ---
+## Deploying Spark cluster
+1. **Start (or ensure Minikube is running)**:
+    
+    ```
+    minikube start
+    ```
+2. **Make the spark deploy script executable**:
+    
+    ```
+    chmod +x deploy_spark.sh
+    ```
 
+3. **Deploy the spark cluster**:
+    
+    ```
+    ./deploy_spark.sh
+    ```
+
+---
 ## Deploying the FastAPI App (with Mongo)
 
 1. **Start (or ensure Minikube is running)**:
@@ -104,16 +122,15 @@ Below are the steps required to run this application, which consists of:
     ./deploy_app.sh
     ```
 
-4. **Check the FastAPI logs**:
-    
-    ```
-    kubectl logs deployment/stock-etl-deployment -n stock-etl-namespace
-    ```
-
-5. **Access the FastAPI service via Minikube**:
+4. **Access the FastAPI service via Minikube**:
     
     ```
     minikube service stock-etl-service -n stock-etl-namespace
+    ```
+5. **Check the FastAPI logs while running app**:
+    
+    ```
+    kubectl logs deployment/stock-etl-deployment -n stock-etl-namespace
     ```
 
 ---
@@ -123,5 +140,6 @@ Below are the steps required to run this application, which consists of:
 Currently, the application can:
 - Check MongoDB server status.
 - Read from and write data to S3 (MinIO).
+- Use spark cluster in ETL process (read & write s3 data & perform transformations)
 
-In the near future, **full API functionality** will be provided by adding a Spark Operator on Kubernetes, enabling advanced data processing features.
+In the near future, **full API functionality** will be provided by adding report scrips: top_stocks, performance_compare.

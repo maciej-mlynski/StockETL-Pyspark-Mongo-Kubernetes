@@ -32,3 +32,22 @@ spec:
             value: "minio"
           - name: MINIO_SECRET_KEY
             value: "minio123"
+          - name: SPARK_MASTER_URL
+            value: "spark://spark-master-svc.spark-namespace.svc.cluster.local:7077"
+          - name: SPARK_DRIVER_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: SPARK_DRIVER_MEMORY
+            value: "1g"
+          - name: SPARK_EXECUTOR_MEMORY
+            value: "8g"
+          - name: SPARK_TOTAL_EXECUTOR_CORES
+            value: "3"
+        resources:
+          requests:
+            cpu: "1"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "2Gi"

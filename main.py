@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 import uvicorn
 from db.check_server import check_mongo_server
-# from routers.etl import router as etl_router
+from routers.etl import router as etl_router
 from routers.etl_artifacts import router as etl_artifacts_router
 from routers.stock_artifacts import router as stock_artifacts_router
 from routers.test_endpoints import router as test_routers
@@ -36,11 +36,10 @@ async def check_mongo_sever():
 
 
 # Include the router from the routers folder
-# app.include_router(etl_router, prefix="/api", tags=["ETL"])
+app.include_router(etl_router, prefix="/api", tags=["ETL"])
 app.include_router(etl_artifacts_router, prefix="/api", tags=["Mongo"])
 app.include_router(stock_artifacts_router, prefix="/api", tags=["Mongo"])
-app.include_router(test_routers, prefix="/api", tags=["Reports"])
-# app.include_router(save_router, prefix="/api", tags=["Write"])
+app.include_router(test_routers, prefix="/api", tags=["TestEndpoints"])
 # app.include_router(top_stocks_router, prefix="/api", tags=["Reports"])
 # app.include_router(performance_router, prefix="/api", tags=["Reports"])
 

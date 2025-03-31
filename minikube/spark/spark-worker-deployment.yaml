@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-worker-deployment
+  namespace: spark-namespace
+  labels:
+    app: spark-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-worker
+  template:
+    metadata:
+      labels:
+        app: spark-worker
+    spec:
+      containers:
+      - name: spark-worker
+        image: bitnami/spark:3.5.5
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8081   # Spark Worker Web UI
+        env:
+          - name: PYSPARK_PYTHON
+            value: "/usr/bin/python3.12"
+          - name: PYSPARK_DRIVER_PYTHON
+            value: "/usr/bin/python3.12"
+          - name: SPARK_MODE
+            value: "worker"
+          - name: SPARK_MASTER_URL
+            value: "spark://spark-master-svc:7077"
+          - name: SPARK_WORKER_PORT
+            value: "7078"
+          - name: SPARK_WORKER_WEBUI_PORT
+            value: "8081"
+          - name: SPARK_WORKER_CORES
+            value: "3"
+          - name: SPARK_WORKER_MEMORY
+            value: "8g"
+        resources:
+          requests:
+            cpu: "3"
+            memory: "8Gi"
+          limits:
+            cpu: "4"
+            memory: "10Gi"

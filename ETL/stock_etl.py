@@ -4,12 +4,11 @@ from utils.date_transform import extract_date_from_path
 from utils.stock_loader import StockLoader
 from db.stock_data_artifacts import StockDataArtifacts
 from db.etl_artifacts import ETLArtifacts
-import os
 
 
 class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
     def __init__(self, spark, input_folder_path):
-        self.input_folder_path = self._validate_input_folder(input_folder_path)
+        self.input_folder_path = input_folder_path
         self.raw_stock_schema = self.define_raw_data_schema()
         self.date, self.year, self.month = extract_date_from_path(input_folder_path)
         self.mode = "append"
@@ -20,12 +19,6 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         self.skip_writing = False
         self.tickers_new = []
         self.api_artifacts = {}
-
-    @staticmethod
-    def _validate_input_folder(input_folder_path):
-        if os.path.exists(input_folder_path):
-            return input_folder_path
-        raise Exception(f"Input folder not found:: {input_folder_path}")
 
     @staticmethod
     def define_raw_data_schema():
@@ -60,11 +53,14 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
                      "ticker", "date_time", "year", "month", "date", "time",
                      "open", "high", "low", "close", "volume"
         """
-        # 1. Read CSV files from the input folder.
-        df = self.spark.read \
-            .option("header", "true") \
-            .schema(self.raw_stock_schema) \
-            .csv(f"{self.input_folder_path}/*")
+        # 1. Read CSV files from minio
+        try:
+            df = self.spark.read \
+                .option("header", "true") \
+                .schema(self.raw_stock_schema) \
+                .csv(f"s3a://rawstockdata/{self.input_folder_path}/*")
+        except Exception as e:
+            raise Exception(f"Could not load raw stock data from minio. Error: {e}")
 
         # 2. Verify that data was loaded.
         if df.rdd.isEmpty():
@@ -170,12 +166,13 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
     def write_partitioned_stock_data(self, stock_data):
         # Write data to StockData folder with partitioning by "ticker", "year", "month"
         print('Saving Stock Data into StockData folder...')
+        path = "s3a://stockdata/data/"
         try:
             stock_data.write.partitionBy("ticker", "year", "month") \
-                .option("header", "true").mode(self.mode).parquet("StockData")
+                .option("header", "true").mode("overwrite").parquet(path)
             print("Data successfully saved to StockData folder")
         except Exception as e:
-            raise Exception(f"Could not save data in StockData. ERROR: {e}")
+            raise Exception(f'Could not save data in {path}. ERROR: {e}')
         self.api_artifacts['WritingData'] = "Successful"
 
     def create_save_stock_data_artifacts(self):
@@ -226,7 +223,7 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
                 min(when(col("ticker").isin(self.tickers_new), col("date_time"))).alias("oldest_date")
             )
             super().update_stock_artifacts(aggregated_df)
-            self.api_artifacts['StockDataArtifacts'] = "Artifacts updated successfully"
+        self.api_artifacts['StockDataArtifacts'] = "Artifacts updated successfully"
 
 
     def run_etl(self):
@@ -241,6 +238,6 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         stock_data = self.validate_file_to_write(stock_data)
         if not self.skip_writing:
             self.write_partitioned_stock_data(stock_data)
-        self.create_save_stock_data_artifacts()
+            self.create_save_stock_data_artifacts()
 
         return [self.api_artifacts]

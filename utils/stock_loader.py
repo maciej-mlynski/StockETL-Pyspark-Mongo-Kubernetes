@@ -1,6 +1,6 @@
 
 class StockLoader:
-    def __init__(self, spark, base_path='StockData'):
+    def __init__(self, spark, base_path="s3a://stockdata/data/"):
         self.spark = spark
         self.base_path = base_path
 
@@ -41,7 +41,10 @@ class StockLoader:
 
         # Read Parquet files from the constructed paths.
         # The "basePath" option enables Spark to automatically extract partition columns.
-        stock_df = self.spark.read.option("basePath", self.base_path).parquet(*paths)
+        try:
+            stock_df = self.spark.read.option("basePath", self.base_path).parquet(*paths)
+        except Exception as e:
+            raise Exception(f"Could not load stock data from minio. Error: {e}")
 
         # Sort data
         stock_df = stock_df.orderBy("ticker", "date", "time")

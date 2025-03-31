@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master-deployment
+  namespace: spark-namespace
+  labels:
+    app: spark-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-master
+  template:
+    metadata:
+      labels:
+        app: spark-master
+    spec:
+      containers:
+      - name: spark-master
+        image: bitnami/spark:3.5.5
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 7077   # Spark Master port
+          - containerPort: 8080   # Spark Master Web UI
+        env:
+          - name: PYSPARK_PYTHON
+            value: "/usr/bin/python3.12"
+          - name: PYSPARK_DRIVER_PYTHON
+            value: "/usr/bin/python3.12"
+          - name: SPARK_MODE
+            value: "master"
+          - name: SPARK_MASTER_PORT_NUMBER
+            value: "7077"
+          - name: SPARK_MASTER_WEBUI_PORT_NUMBER
+            value: "8080"
+        resources:
+          requests:
+            cpu: "1"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master-svc
+  namespace: spark-namespace
+  labels:
+    app: spark-master
+spec:
+  selector:
+    app: spark-master
+  ports:
+    - name: master
+      protocol: TCP
+      port: 7077
+      targetPort: 7077
+    - name: master-webui
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
