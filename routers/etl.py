@@ -17,8 +17,9 @@ async def run_stock_etl(input_folder_path: str='stocks_2025_02_05'):
         etl_app = StockETL(spark, input_folder_path)
         api_artifacts = etl_app.run_etl()
 
+        # Stop spark session
+        spark.stop()
+
         return api_artifacts
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
