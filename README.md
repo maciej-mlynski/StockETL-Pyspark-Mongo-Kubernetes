@@ -52,7 +52,7 @@ Below are the steps required to run this application, which consists of:
     ```
 * You can deploy each component separately following README.md in `deployment/README.md`
 
-
+---
 ## Upload RawStockData to Minio
 1. **Change full data loading file mode**:
     
@@ -65,16 +65,7 @@ Below are the steps required to run this application, which consists of:
     ./load_raw_data_minio.sh
     ```
 
-## Current Features & Future Plans
-
-Currently, the application can:
-- Check MongoDB server status.
-- Read from and write data to S3 (MinIO).
-- Use spark cluster in ETL process (read & write s3 data & perform transformations)
-
-In the near future, **full API functionality** will be provided by adding report scrips: top_stocks, performance_compare.
-
-
+---
 ## Running ETL API
 1. **In order to run API you should first start the Kubernetes App**
     ```
@@ -89,6 +80,9 @@ In the near future, **full API functionality** will be provided by adding report
 5. **Select the input folder name or use default one:** `stocks_historical_to_2025_02_04`
 6. **Click - execute**
 
+* Keep in mind that running etl on historical data (20GB) might take more than 20 minutes
+
+---
 ## Spark cluster check
 1. **In order to get to Spark UI you MUST first forward the port via terminal**
    ```
@@ -103,7 +97,7 @@ In the near future, **full API functionality** will be provided by adding report
    - Running Apps
    - Completed runs
 
-
+---
 ## Current Features & Future Plans
 
 Currently, the application can:
