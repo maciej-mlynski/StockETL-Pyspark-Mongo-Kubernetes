@@ -21,6 +21,7 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
   hostPath:
     path: /data/minio/minio0
 ---
@@ -40,5 +41,6 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
   hostPath:
     path: /data/minio/minio1

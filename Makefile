@@ -30,5 +30,17 @@ log-spark-master:
 log-spark-worker:
 	kubectl logs deployment/spark-worker-deployment -n spark-namespace
 
-restart-app:
+redeploy-app:
+	./deployment/deploy_app.sh
+	kubectl rollout restart deployment mongo-deployment -n stock-etl-namespace
 	kubectl rollout restart deployment stock-etl-deployment -n stock-etl-namespace
+
+redeploy-spark:
+	./deployment/deploy_spark.sh
+	kubectl rollout restart deployment spark-master-deployment -n spark-namespace
+	kubectl rollout restart deployment spark-worker-deployment -n spark-namespace
+	kubectl rollout restart deployment spark-history-server -n spark-namespace
+
+redeploy-minio:
+	./deployment/deploy_minio.sh
+	kubectl rollout restart statefulset datasaku-minio -n minio-dev
