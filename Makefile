@@ -3,7 +3,7 @@
 run-minikube:
 	minikube start
 
-check-stock-app:
+check-app:
 	 kubectl get pods -n stock-etl-namespace
 
 check-spark:
