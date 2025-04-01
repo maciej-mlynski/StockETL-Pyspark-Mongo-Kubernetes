@@ -4,12 +4,12 @@ set -e
 MINIO_ALIAS="myminio"
 RAW_BUCKET="rawstockdata"
 STOCK_BUCKET="stockdata"
-MINIO_USER="minio"
-MINIO_PASSWORD="minio123"
-
 LOCAL_FOLDER_PATH="RawStockData"
 MINIO_SERVICE="minio-service"
 MINIO_NAMESPACE="minio-dev"
+
+MINIO_USER=$(kubectl get secret minio-secret -n $MINIO_NAMESPACE -o jsonpath="{.data.minio-access-key}" | base64 --decode)
+MINIO_PASSWORD=$(kubectl get secret minio-secret -n $MINIO_NAMESPACE -o jsonpath="{.data.minio-secret-key}" | base64 --decode)
 
 # Start minikube service for minio
 minikube service $MINIO_SERVICE -n $MINIO_NAMESPACE --url > minio_url.txt &
