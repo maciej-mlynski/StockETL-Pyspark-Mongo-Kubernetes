@@ -1,32 +1,34 @@
-.PHONY: build down run run-scaled run-d stop submit drop-project
+.PHONY: run-minikube check-stock-app check-spark check-spark fwd-spark minio-ui run-app log-app log-spark-master log-spark-worker restart-app
 
-build:
-	docker-compose -f stock_docker/docker-compose.yaml build
+run-minikube:
+	minikube start
 
-down:
-	docker-compose -f stock_docker/docker-compose.yaml down --volumes
+check-stock-app:
+	 kubectl get pods -n stock-etl-namespace
 
-run:
-	make down && docker-compose -f stock_docker/docker-compose.yaml up
+check-spark:
+	kubectl get pods -n spark-namespace
 
-run-scaled:
-	make down && docker-compose -f stock_docker/docker-compose.yaml up --scale spark-worker=5
+check-minio:
+	kubectl get pods -n minio-dev
 
-run-d:
-	make down && docker-compose -f stock_docker/docker-compose.yaml up -d
+fwd-spark:
+	 kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
 
-stop:
-	docker-compose -f stock-docker/stock_docker.yaml stop
+minio-ui:
+	 minikube service minio-service -n minio-dev
 
-# Usage: make submit app=<path_to_app_script>
-submit:
-	docker exec spark-master spark-submit --master spark://spark-master:7077 --deploy-mode client ./apps/$(app)
+run-app:
+	minikube service stock-etl-service -n stock-etl-namespace
 
-# Drop only images with the 'stock-etl' prefix
-drop-project:
-	@images=$$(docker images --filter=reference='stock-etl*' -q); \
-	if [ -n "$$images" ]; then \
-		docker rmi $$images; \
-	else \
-		echo "No stock-etl images to remove"; \
-	fi
+log-app:
+	kubectl logs deployment/stock-etl-deployment -n stock-etl-namespace
+
+log-spark-master:
+	kubectl logs deployment/spark-master-deployment -n spark-namespace
+
+log-spark-worker:
+	kubectl logs deployment/spark-worker-deployment -n spark-namespace
+
+restart-app:
+	kubectl rollout restart deployment stock-etl-deployment -n stock-etl-namespace
