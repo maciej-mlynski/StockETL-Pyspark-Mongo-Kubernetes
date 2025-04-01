@@ -4,13 +4,10 @@ set -e
 # This script deploys the main application (FastAPI + Mongo)
 # in the 'stock-etl-namespace'. It also rebuilds the Docker image if needed.
 
-# 1. Delete the namespace if it exists
-echo "Deleting namespace 'stock-etl-namespace' (if it exists)..."
-kubectl delete namespace stock-etl-namespace --ignore-not-found
-
-# 1a. Create the namespace
-echo "Creating namespace 'stock-etl-namespace'..."
-kubectl create ns stock-etl-namespace
+# 1. Check if stock-etl-namespace exists -> if not create one
+echo "Checking if 'stock-etl-namespace' exists..."
+kubectl get namespace stock-etl-namespace || kubectl create namespace stock-etl-namespace
+echo "stock-etl-namespace is ready!"
 
 # 2. Remove the Docker image (if it exists)
 echo "Removing local Docker image 'stock-etl-app:latest' if it exists..."
@@ -25,6 +22,12 @@ echo "Building the Docker image 'stock-etl-app:latest'..."
 docker build -t stock-etl-app:latest -f docker/Dockerfile .
 
 # 5. Apply Kubernetes manifests for MongoDB
+echo "Applying Persistent Volume (PV) for Mongo..."
+kubectl apply -f minikube/mongo/mongo-pv.yaml -n stock-etl-namespace
+
+echo "Applying Persistent Volume Claim (PVC) for Mongo..."
+kubectl apply -f minikube/mongo/mongo-pvc.yaml -n stock-etl-namespace
+
 echo "Applying MongoDB manifests..."
 kubectl apply -f minikube/mongo/mongo-deployment.yaml -n stock-etl-namespace
 
@@ -34,6 +37,7 @@ kubectl apply -f minikube/app/stock-etl-deployment.yaml -n stock-etl-namespace
 kubectl apply -f minikube/app/stock-etl-service.yaml -n stock-etl-namespace
 
 # 7. Copy minio secrets
+kubectl delete secret minio-secret -n stock-etl-namespace --ignore-not-found
 kubectl get secret minio-secret -n minio-dev -o yaml \
 | sed 's/namespace: minio-dev/namespace: stock-etl-namespace/' \
 | kubectl apply -f -
