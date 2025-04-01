@@ -33,7 +33,12 @@ echo "Applying FastAPI (app) manifests..."
 kubectl apply -f minikube/app/stock-etl-deployment.yaml -n stock-etl-namespace
 kubectl apply -f minikube/app/stock-etl-service.yaml -n stock-etl-namespace
 
-# 7. Check pods
+# 7. Copy minio secrets
+kubectl get secret minio-secret -n minio-dev -o yaml \
+| sed 's/namespace: minio-dev/namespace: stock-etl-namespace/' \
+| kubectl apply -f -
+
+# 8. Check pods
 echo "Checking pods in 'stock-etl-namespace'..."
 kubectl get pods -n stock-etl-namespace
 

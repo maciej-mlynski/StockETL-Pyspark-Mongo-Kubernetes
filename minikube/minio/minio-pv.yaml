@@ -18,7 +18,7 @@ spec:
     name: data-datasaku-minio-0
     namespace: minio-dev
   capacity:
-    storage: 8Gi
+    storage: 10Gi
   accessModes:
     - ReadWriteMany
   hostPath:
@@ -37,7 +37,7 @@ spec:
     name: data-datasaku-minio-1
     namespace: minio-dev
   capacity:
-    storage: 8Gi
+    storage: 10Gi
   accessModes:
     - ReadWriteMany
   hostPath:

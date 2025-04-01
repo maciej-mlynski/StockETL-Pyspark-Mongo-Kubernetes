@@ -21,12 +21,15 @@ spec:
       - name: minio
         env:
         - name: MINIO_ACCESS_KEY
-          value: "minio"
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: minio-access-key
         - name: MINIO_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: minio-secret
-              key: minio-password
+              key: minio-secret-key
         # - name: MINIO_CONSOLE_SUBPATH
         #   value: "/web-ui/"
         # - name: MINIO_BROWSER_REDIRECT_URL
@@ -79,7 +82,7 @@ spec:
           - "ReadWriteOnce"
         resources:
           requests:
-            storage: "8Gi"
+            storage: "10Gi"
         selector:
           matchLabels:
             app: minio-app

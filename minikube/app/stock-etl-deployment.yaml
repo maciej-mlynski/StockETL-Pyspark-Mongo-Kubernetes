@@ -29,9 +29,15 @@ spec:
           - name: MINIO_PORT
             value: "6544"
           - name: MINIO_ACCESS_KEY
-            value: "minio"
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: minio-access-key
           - name: MINIO_SECRET_KEY
-            value: "minio123"
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: minio-secret-key
           - name: SPARK_MASTER_URL
             value: "spark://spark-master-svc.spark-namespace.svc.cluster.local:7077"
           - name: SPARK_DRIVER_HOST

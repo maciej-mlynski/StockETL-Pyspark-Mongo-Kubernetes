@@ -24,6 +24,30 @@ Below are the steps required to run this application, which consists of:
     brew install minio/stable/mc
     ```
 
+## Set-up MinIO credentials
+1. **Create your base64 username & password by running this in terminal**:
+   ```
+   echo -n '<USER_NAME>' | base64
+   echo -n '<PASSWORD>' | base64
+    ```
+   Example.:
+   ```
+   echo -n 'minio' | base64
+   echo -n 'minio321' | base64
+    ```
+
+2. **Open the file in dir**:
+   ```
+   minikube/minio/minio-secret.yaml
+   ```
+3. **Paste your encoded credential**:
+   ```
+   minio-access-key: <ENCODED_USERNAME>
+   minio-secret-key: <ENCODED_PASSWORD>
+   ```
+   
+These credentials will allow you to **log in to MinIO UI**. The application will automatically use these credentials to read and write data to S3.
+
 ---
 ## Deploy FastApi, MinIO, Mongo & spark to kubernetes
 1. **Change full deployment file mode**:
@@ -36,7 +60,7 @@ Below are the steps required to run this application, which consists of:
     ```
     ./deploy_all.sh
     ```
-3. **Check if all 3 pods are running**
+3. **Check if all 3 pods are running**:
     
    a) App & Mongo
    ```
@@ -62,39 +86,39 @@ Below are the steps required to run this application, which consists of:
     ```
     ./load_raw_data_minio.sh
     ```
-3. **In order top see MinIO UI run in terminal**
+3. **In order top see MinIO UI run in terminal**:
    ```
     minikube service minio-service -n minio-dev
     ```
 
 ---
 ## Running ETL API
-1. **In order to run API you should first start the Kubernetes App**
+1. **In order to run API you should first start the Kubernetes App**:
     ```
     minikube service stock-etl-service -n stock-etl-namespace
     ```
 2. **Open stock-etl-service (2nd url in terminal)**
-3. **You should be able to see the Swagger UI with all available APIs**
+3. **You should be able to see the Swagger UI with all available APIs**:
 4. **Find ETL api**
    ```
     api/run_stock_etl
     ```
-5. **Select the input folder name or use default one:** `stocks_historical_to_2025_02_04`
+5. **Select the input folder name or use default one**: `stocks_historical_to_2025_02_04`
 6. **Click - execute**
 
 * Keep in mind that running etl on historical data (20GB) might take more than 20 minutes
 
 ---
 ## Spark cluster check
-1. **In order to get to Spark UI you MUST first forward the port via terminal**
+1. **In order to get to Spark UI you MUST first forward the port via terminal**:
    ```
     kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
     ```
-2. **Then just open the url in you web browser**
+2. **Then just open the url in you web browser**:
    ```
     127.0.0.1:8080
     ```
-3. **In the UI you can check:**
+3. **In the UI you can check**:
    - Available workers & their resources
    - Running Apps
    - Completed runs
