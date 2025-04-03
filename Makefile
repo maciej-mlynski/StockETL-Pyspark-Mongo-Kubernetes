@@ -4,7 +4,7 @@ run-minikube:
 	minikube start
 
 check-app:
-	 kubectl get pods -n stock-etl-namespace
+	kubectl get pods -n stock-etl-namespace
 
 check-spark:
 	kubectl get pods -n spark-namespace
@@ -13,16 +13,22 @@ check-minio:
 	kubectl get pods -n minio-dev
 
 fwd-spark:
-	 kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
+	kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
 
 minio-ui:
-	 minikube service minio-service -n minio-dev
+	minikube service minio-service -n minio-dev
+
+spark-logs-ui:
+	minikube service spark-history-service -n stock-etl-namespace
 
 run-app:
 	minikube service stock-etl-service -n stock-etl-namespace
 
 log-app:
 	kubectl logs deployment/stock-etl-deployment -n stock-etl-namespace
+
+log-spark-history:
+	kubectl logs deployment/spark-history-server -n stock-etl-namespace
 
 log-spark-master:
 	kubectl logs deployment/spark-master-deployment -n spark-namespace
@@ -34,6 +40,7 @@ redeploy-app:
 	./deployment/deploy_app.sh
 	kubectl rollout restart deployment mongo-deployment -n stock-etl-namespace
 	kubectl rollout restart deployment stock-etl-deployment -n stock-etl-namespace
+	kubectl rollout restart deployment spark-history-server -n stock-etl-namespace
 
 redeploy-spark:
 	./deployment/deploy_spark.sh
@@ -44,3 +51,4 @@ redeploy-spark:
 redeploy-minio:
 	./deployment/deploy_minio.sh
 	kubectl rollout restart statefulset datasaku-minio -n minio-dev
+	echo "Redeploying app & spark namespace might be required depending on the change!"

@@ -1,134 +1,214 @@
 # Project Installation & Deployment
 
-Below are the steps required to run this application, which consists of:
+This guide outlines the steps required to run the application, which consists of:
 - A **MinIO** instance for storing raw data (S3-compatible object storage).
 - A **MongoDB** instance for database storage.
 - A **FastAPI** application that interacts with both MongoDB and MinIO.
+- A **Spark** transformation engine with a log server.
 
 ---
 
 ## Prerequisites
 
 1. **Minikube**  
-   Install following the official guide:  
+   Install Minikube following the official guide:  
    [https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew)
 
 2. **Docker**  
+   Download and install Docker Desktop:  
    [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
 
-3. **mc (MinIO Client)** for manual data uploads
+3. **mc (MinIO Client)** for uploading data  
 
-    Install via Homebrew (on macOS):
-    
-    ```
-    brew install minio/stable/mc
-    ```
+   Install via Homebrew (on macOS):
 
-## Set-up MinIO credentials
-1. **Create your base64 username & password by running this in terminal**:
+   ```
+   brew install minio/stable/mc
+   ```
+
+---
+
+## Set Up MinIO Credentials
+
+1. **Generate base64-encoded username and password**:
+
    ```
    echo -n '<USER_NAME>' | base64
    echo -n '<PASSWORD>' | base64
-    ```
-   Example.:
+   ```
+
+   Example:
+
    ```
    echo -n 'minio' | base64
    echo -n 'minio321' | base64
-    ```
+   ```
 
-2. **Open the file in dir**:
+2. **Open the secret configuration file**:
+
    ```
    minikube/minio/minio-secret.yaml
    ```
-3. **Paste your encoded credential**:
+
+3. **Paste the encoded credentials**:
+
    ```
    minio-access-key: <ENCODED_USERNAME>
    minio-secret-key: <ENCODED_PASSWORD>
    ```
-   
-These credentials will allow you to **log in to MinIO UI**. The application will automatically use these credentials to read and write data to S3.
+
+> These credentials will allow you to **log in to the MinIO UI**. The application will automatically use them to read and write data to S3.
 
 ---
-## Deploy FastApi, MinIO, Mongo & spark to kubernetes
-1. **Change full deployment file mode**:
-    
-    ```
-    chmode -x deploy_all.sh
-    ```
-2. **Perform full deployment**:
-    
-    ```
-    ./deploy_all.sh
-    ```
-3. **Check if all 3 pods are running**:
-    
-   a) App & Mongo
+
+## Deploy FastAPI, MinIO, MongoDB & Spark to Kubernetes
+
+1. **Make the deployment script executable**:
+
    ```
-    kubectl get pods -n stock-etl-namespace
-    ```
-   b) Spark
+   chmode -x deploy_all.sh
    ```
-    kubectl get pods -n spark-namespace
-    ```
-   c) Minio
-    ```
-    kubectl get pods -n minio-dev
-    ```
-* You can deploy each component separately following README.md in `deployment/README.md`
+
+2. **Run the full deployment (Docker & Kubernetes)**:
+
+   ```
+   ./deploy_all.sh
+   ```
+
+3. **Verify pods**:
+
+   a) FastAPI, MongoDB, Spark History:
+
+   ```
+   kubectl get pods -n stock-etl-namespace / make check-app
+   ```
+
+   b) Spark:
+
+   ```
+   kubectl get pods -n spark-namespace
+   ```
+
+   c) MinIO:
+
+   ```
+   kubectl get pods -n minio-dev
+   ```
+
+> You can also deploy each component individually by following the instructions in `deployment/README.md`.
 
 ---
-## Upload RawStockData to Minio
-1. **Change full data loading file mode**:
-    ```
-    chmode -x load_raw_data_minio.sh
-    ```
-2. **Perform full deployment**:
-    ```
-    ./load_raw_data_minio.sh
-    ```
-3. **In order top see MinIO UI run in terminal**:
+
+## Upload Raw Stock Data to MinIO
+
+1. **Make the data upload script executable**:
+
    ```
-    minikube service minio-service -n minio-dev
-    ```
+   chmode -x load_raw_data_minio.sh
+   ```
+
+2. **Run the data upload**:
+
+   ```
+   ./load_raw_data_minio.sh
+   ```
+
+3. **Access the MinIO UI**:
+
+   ```
+   minikube service minio-service -n minio-dev
+   ```
 
 ---
-## Running ETL API
-1. **In order to run API you should first start the Kubernetes App**:
-    ```
-    minikube service stock-etl-service -n stock-etl-namespace
-    ```
-2. **Open stock-etl-service (2nd url in terminal)**
-3. **You should be able to see the Swagger UI with all available APIs**:
-4. **Find ETL api**
-   ```
-    api/run_stock_etl
-    ```
-5. **Select the input folder name or use default one**: `stocks_historical_to_2025_02_04`
-6. **Click - execute**
 
-* Keep in mind that running etl on historical data (20GB) might take more than 20 minutes
+## Running the ETL API
 
----
-## Spark cluster check
-1. **In order to get to Spark UI you MUST first forward the port via terminal**:
+1. **Start the Kubernetes application**:
+
    ```
-    kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
-    ```
-2. **Then just open the url in you web browser**:
+   minikube service stock-etl-service -n stock-etl-namespace
    ```
-    127.0.0.1:8080
-    ```
-3. **In the UI you can check**:
-   - Available workers & their resources
-   - Running Apps
-   - Completed runs
+
+2. **Open the second URL displayed in the terminal output.**
+
+3. **Access the Swagger UI to explore available APIs.**
+
+4. **Locate the ETL API endpoint**:
+
+   ```
+   api/run_stock_etl
+   ```
+
+5. **Specify the input folder name or use the default**: `stocks_historical_to_2025_02_04`
+
+6. **Click "Execute" to start the ETL process.**
+
+> ⚠️ Note: Running the ETL on historical data (~20 GB) may take more than 20 minutes.
 
 ---
+
+## Checking the Spark Cluster
+
+1. **Forward the Spark UI port in your terminal**:
+
+   ```
+   kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
+   ```
+
+2. **Open the following URL in your web browser**:
+
+   ```
+   127.0.0.1:8080
+   ```
+
+3. **In the Spark UI, you can monitor**:
+   - Available workers and their resources
+   - Active applications
+   - Completed job runs
+
+---
+
+## Viewing Spark Logs
+
+1. **Start the Spark History Server**:
+
+   ```
+   minikube service spark-history-service -n stock-etl-namespace
+   ```
+
+2. **A browser window should open with the Spark History Server UI.**  
+   If not, copy the URL displayed in the terminal and open it manually.
+
+3. **In the Spark History UI, you can**:
+   - View a list of completed Spark applications
+   - Check each run’s App ID, name, user, duration, and submission time
+   - Click on any App ID to:
+     - Inspect stages, tasks, and jobs
+     - Review execution timelines, performance metrics, and job summaries
+     - Visualize DAGs (Directed Acyclic Graphs) for stage dependencies
+     - Download event logs for debugging or tuning
+
+---
+
 ## Current Features & Future Plans
 
-Currently, the application can:
-- Check MongoDB server status.
-- Read from and write data to S3 (MinIO) & Mongo DB.
-- Use spark cluster in ETL process (read & write s3 data & perform transformations)
+**Currently available via API**:
+- Execute the full ETL process using a Spark cluster (S3 input/output, MongoDB artifact storage)
+- Select top-performing stocks within a given timeframe
+- Health-check endpoint for MongoDB connectivity
+- Retrieve ETL artifacts from MongoDB
 
-In the near future, **full API functionality** will be provided by adding report scrips: top_stocks, performance_compare.
+**Additional functionality**:
+- Debug Spark jobs using the integrated Spark History Server
+- Makefile with handy commands for:
+  - Pod status checks  
+  - Deployment logs  
+  - Redeploying apps/images  
+  - Managing Kubernetes namespaces  
+  - And more...
+
+**Coming soon**:
+- Jupyter Notebook integration within the Kubernetes cluster
+- Autoscaling for the Spark cluster
+- Spark Operator for job lifecycle management
+- Apache Airflow for ETL pipeline scheduling and orchestration

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history-server
+  namespace: stock-etl-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-history-server
+  template:
+    metadata:
+      labels:
+        app: spark-history-server
+    spec:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+        - name: spark-history-server
+          image: bitnami/spark:3.5.5
+          imagePullPolicy: IfNotPresent
+          command:
+            - /opt/bitnami/spark/bin/spark-class
+            - org.apache.spark.deploy.history.HistoryServer
+          ports:
+            - containerPort: 18080
+          env:
+            - name: SPARK_HISTORY_OPTS
+              value: >-
+                -Dspark.history.fs.logDirectory=/tmp/spark-events
+                -Dspark.history.ui.port=18080
+                -Dspark.history.retainedApplications=50
+          volumeMounts:
+            - name: spark-logs-volume
+              mountPath: /tmp/spark-events
+      volumes:
+        - name: spark-logs-volume
+          persistentVolumeClaim:
+            claimName: spark-logs-pvc

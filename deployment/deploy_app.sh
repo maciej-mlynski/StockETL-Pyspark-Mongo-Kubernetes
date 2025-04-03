@@ -21,13 +21,18 @@ eval $(minikube docker-env)
 echo "Building the Docker image 'stock-etl-app:latest'..."
 docker build -t stock-etl-app:latest -f docker/Dockerfile .
 
+# 5. Apply Kubernetes manifests for Spark-history
+echo "Applying PV & PVC for Spark logs..."
+kubectl apply -f minikube/spark_logs/spark-history-pv-pvc.yaml -n stock-etl-namespace
+echo "Applying Spark-history manifests..."
+kubectl apply -f minikube/spark_logs/spark-history-server.yaml -n stock-etl-namespace
+kubectl apply -f minikube/spark_logs/spark-history-service.yaml -n stock-etl-namespace
+
 # 5. Apply Kubernetes manifests for MongoDB
 echo "Applying Persistent Volume (PV) for Mongo..."
 kubectl apply -f minikube/mongo/mongo-pv.yaml -n stock-etl-namespace
-
 echo "Applying Persistent Volume Claim (PVC) for Mongo..."
 kubectl apply -f minikube/mongo/mongo-pvc.yaml -n stock-etl-namespace
-
 echo "Applying MongoDB manifests..."
 kubectl apply -f minikube/mongo/mongo-deployment.yaml -n stock-etl-namespace
 

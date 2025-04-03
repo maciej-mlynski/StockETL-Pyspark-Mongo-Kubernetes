@@ -27,6 +27,9 @@ class Builder:
             .config("spark.hadoop.fs.s3a.secret.key", os.environ["MINIO_SECRET_KEY"])
             .config("spark.hadoop.fs.s3a.path.style.access", "true")
             .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+            .config("spark.eventLog.enabled", "true")
+            .config("spark.eventLog.dir", os.environ["SPARK_EVENTLOG_DIR"])
+            .config("spark.history.fs.logDirectory", os.environ["SPARK_EVENTLOG_DIR"])
             .getOrCreate())
 
         return spark
