@@ -28,14 +28,6 @@ echo "Applying Spark-history manifests..."
 kubectl apply -f minikube/spark_logs/spark-history-server.yaml -n stock-etl-namespace
 kubectl apply -f minikube/spark_logs/spark-history-service.yaml -n stock-etl-namespace
 
-# 5. Apply Kubernetes manifests for MongoDB
-echo "Applying Persistent Volume (PV) for Mongo..."
-kubectl apply -f minikube/mongo/mongo-pv.yaml -n stock-etl-namespace
-echo "Applying Persistent Volume Claim (PVC) for Mongo..."
-kubectl apply -f minikube/mongo/mongo-pvc.yaml -n stock-etl-namespace
-echo "Applying MongoDB manifests..."
-kubectl apply -f minikube/mongo/mongo-deployment.yaml -n stock-etl-namespace
-
 # 6. Apply Kubernetes manifests for FastAPI app
 echo "Applying FastAPI (app) manifests..."
 kubectl apply -f minikube/app/stock-etl-deployment.yaml -n stock-etl-namespace

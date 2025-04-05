@@ -12,8 +12,15 @@ check-spark:
 check-minio:
 	kubectl get pods -n minio-dev
 
+check-mongo:
+	kubectl get pods -n stock-mongo-namespace
+
 fwd-spark:
 	kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
+
+mongo-sh:
+	@POD_NAME=$$(kubectl get pods -n stock-mongo-namespace -l app=mongo -o jsonpath='{.items[0].metadata.name}'); \
+	kubectl exec -it $$POD_NAME -n stock-mongo-namespace -- mongosh
 
 minio-ui:
 	minikube service minio-service -n minio-dev
@@ -27,6 +34,9 @@ run-app:
 log-app:
 	kubectl logs deployment/stock-etl-deployment -n stock-etl-namespace
 
+log-mongo:
+	kubectl logs deployment/mongo-deployment -n stock-mongo-namespace
+
 log-spark-history:
 	kubectl logs deployment/spark-history-server -n stock-etl-namespace
 
@@ -38,9 +48,12 @@ log-spark-worker:
 
 redeploy-app:
 	./deployment/deploy_app.sh
-	kubectl rollout restart deployment mongo-deployment -n stock-etl-namespace
 	kubectl rollout restart deployment stock-etl-deployment -n stock-etl-namespace
 	kubectl rollout restart deployment spark-history-server -n stock-etl-namespace
+
+redeploy-mongo:
+	./deployment/deploy_mongo.sh
+	kubectl rollout restart deployment mongo-deployment -n stock-mongo-namespace
 
 redeploy-spark:
 	./deployment/deploy_spark.sh

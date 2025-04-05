@@ -18,7 +18,7 @@ def create_databases():
         sys.exit(1)
 
     # Connect to MongoDB server (adjust the URI as needed)
-    client = MongoClient(os.environ.get("MONGO_URI", "mongodb://localhost:27017/"))
+    client = MongoClient(os.environ["MONGO_URI"])
 
     # Access the databases (they will be created when data is inserted)
     stock_data_db = client["StockDB"]

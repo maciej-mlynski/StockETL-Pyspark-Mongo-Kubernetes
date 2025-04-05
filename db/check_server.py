@@ -4,7 +4,7 @@ from pymongo.errors import ServerSelectionTimeoutError
 import os
 
 
-def check_mongo_server(mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/"), timeout_ms=3000):
+def check_mongo_server(mongo_uri = os.environ["MONGO_URI"], timeout_ms=3000):
     """
     Checks if the MongoDB server is running by attempting to ping it.
 

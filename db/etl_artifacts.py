@@ -5,7 +5,7 @@ import os
 
 
 class ETLArtifacts:
-    def __init__(self, mongo_uri=os.environ.get("MONGO_URI", "mongodb://localhost:27017/"), db_name="StockDB",
+    def __init__(self, mongo_uri=os.environ["MONGO_URI"], db_name="StockDB",
                  collection_name="ETLArtifacts"):
         """
         Initializes the ETLArtifacts class.

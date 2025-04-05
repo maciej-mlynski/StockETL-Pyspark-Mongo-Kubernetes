@@ -15,6 +15,11 @@ chmod +x deployment/deploy_spark.sh
 ./deployment/deploy_spark.sh
 
 echo
-echo "Deploying Fast API with mongo"
+echo "Deploying Mongo db"
+chmod +x deployment/deploy_mongo.sh
+./deployment/deploy_mongo.sh
+
+echo
+echo "Deploying Fast API app"
 chmod +x deployment/deploy_app.sh
 ./deployment/deploy_app.sh
