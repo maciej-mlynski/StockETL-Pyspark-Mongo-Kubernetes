@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stock-etl-deployment
-  namespace: stock-etl-namespace
+  name: stock-api-deployment
+  namespace: stock-api-namespace
   labels:
-    app: stock-etl
+    app: stock-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stock-etl
+      app: stock-api
   template:
     metadata:
       labels:
-        app: stock-etl
+        app: stock-api
     spec:
       containers:
-      - name: stock-etl-container
-        image: stock-etl-app:latest
+      - name: stock-api-container
+        image: stock-api-app:latest
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8000

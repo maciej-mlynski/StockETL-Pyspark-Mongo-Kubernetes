@@ -20,7 +20,7 @@ RUN mkdir -p /tmp/spark-events && \
 WORKDIR /app
 
 # Download requirements
-COPY docker/requirements.txt .
+COPY docker/API/requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Coppy all files from root dir

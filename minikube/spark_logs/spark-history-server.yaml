@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spark-history-server
-  namespace: stock-etl-namespace
+  namespace: stock-api-namespace
 spec:
   replicas: 1
   selector:
