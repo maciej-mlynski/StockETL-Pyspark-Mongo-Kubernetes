@@ -8,10 +8,13 @@ RUN apt-get update && \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN useradd -u 1001 -m -d /home/spark spark
+# Create user and group with UID/GID 1001
+RUN groupadd -g 1001 spark && \
+    useradd -m -u 1001 -g spark -s /bin/bash spark
 
-# Add folder for spark-logs
-RUN mkdir -p /tmp/spark-events && chown spark:spark /tmp/spark-events
+# Create logs dir & assign to spark user
+RUN mkdir -p /tmp/spark-events && \
+    chown -R spark:spark /tmp/spark-events
 
 # Set working dir
 WORKDIR /app
