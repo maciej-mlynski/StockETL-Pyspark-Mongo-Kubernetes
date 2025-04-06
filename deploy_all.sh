@@ -23,3 +23,8 @@ echo
 echo "Deploying Fast API app..."
 chmod +x deployment/deploy_api.sh
 ./deployment/deploy_api.sh
+
+echo
+echo "Deploying ETL app..."
+chmod +x deployment/deploy_etl.sh
+./deployment/deploy_etl.sh

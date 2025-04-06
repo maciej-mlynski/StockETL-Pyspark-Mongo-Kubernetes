@@ -15,6 +15,9 @@ check-minio:
 check-mongo:
 	kubectl get pods -n stock-mongo-namespace
 
+check-etl:
+	kubectl get pods -n spark-jobs
+
 fwd-spark:
 	kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
 
@@ -31,8 +34,14 @@ spark-logs-ui:
 run-api:
 	minikube service stock-api-service -n stock-api-namespace
 
+log-minio:
+	kubectl describe pod datasaku-minio-0 -n minio-dev
+
 log-api:
 	kubectl logs deployment/stock-api-deployment -n stock-api-namespace
+
+log-etl:
+	kubectl logs spark-stock-etl-driver -n spark-jobs -f
 
 log-mongo:
 	kubectl logs deployment/mongo-deployment -n stock-mongo-namespace
@@ -51,6 +60,9 @@ redeploy-api:
 	kubectl rollout restart deployment stock-api-deployment -n stock-api-namespace
 	kubectl rollout restart deployment spark-history-server -n stock-api-namespace
 
+redeploy-etl:
+	./deployment/deploy_etl.sh
+
 redeploy-mongo:
 	./deployment/deploy_mongo.sh
 	kubectl rollout restart deployment mongo-deployment -n stock-mongo-namespace
@@ -64,4 +76,4 @@ redeploy-spark:
 redeploy-minio:
 	./deployment/deploy_minio.sh
 	kubectl rollout restart statefulset datasaku-minio -n minio-dev
-	echo "Redeploying api & spark namespace might be required depending on the change!"
+	echo "Redeploying api & spark might be required depending on the change!"

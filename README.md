@@ -26,6 +26,14 @@ This guide outlines the steps required to run the application, which consists of
    brew install minio/stable/mc
    ```
 
+4. **Helm** for spark-operator 
+
+   Install via Homebrew (on macOS):
+
+   ```
+   brew install helm
+   ```
+
 ---
 
 ## Set Up MinIO Credentials
@@ -121,7 +129,35 @@ This guide outlines the steps required to run the application, which consists of
 
 ---
 
-## Running the ETL API
+## Running Stock ETL with spark-operator
+
+1. **Before you run ETL you should make sure that raw stock data is already in S3**:
+    ```
+    minikube service minio-service -n minio-dev
+    ```
+2. **Change the input_folder_name in `minikube/etl/spark-etl-job.yaml`**:
+
+   - By default, the argument is set to `stocks_historical_to_2025_02_04`
+   - You should run this process 4 times in order to process each input folder separately
+   - The next file you should run on is `stocks_2025_02_05`, etc.
+
+3. **In order to run ETL with spark operator you should apply manifest by**:
+   ```
+   kubectl apply -f minikube/etl/spark-etl-job.yaml -n spark-jobs
+    ```
+
+4. **In order to see the pods run**:
+   ```
+   kubectl get pods -n spark-jobs
+    ```
+5. **In order to see ETL logs/results you can run**:
+   ```
+   kubectl logs spark-stock-etl-driver -n spark-jobs -f
+   kubectl describe sparkapplication spark-stock-etl -n spark-jobs
+   ```
+
+---
+## Running the APIs
 
 1. **Start the Kubernetes application**:
 
@@ -132,20 +168,19 @@ This guide outlines the steps required to run the application, which consists of
 2. **Open the second URL displayed in the terminal output.**
 
 3. **Access the Swagger UI to explore available APIs.**
+   
+### Mongo
+1. check_mongo_sever
+2. get_etl_artifacts_by_run_id
+3. get_stock_artifacts_by_ticker_name
 
-4. **Locate the ETL API endpoint**:
+> This APIs can help you validate the ETL results
 
-   ```
-   api/run_stock_etl
-   ```
+### Reports
+1. get_top_stocks
+   
+> This API work on spark cluster, and it can present top profit stocks for you extremely fast!
 
-5. **Specify the input folder name or use the default**: `stocks_historical_to_2025_02_04`
-
-6. **Click "Execute" to start the ETL process.**
-
-> ⚠️ Note: Running the ETL on historical data (~20 GB) may take more than 20 minutes.
-
----
 
 ## Checking the Spark Cluster
 
@@ -165,6 +200,8 @@ This guide outlines the steps required to run the application, which consists of
    - Available workers and their resources
    - Active applications
    - Completed job runs
+
+Keep in mind that if you didn't run get_top_stocks API you may not see anything there
 
 ---
 
@@ -193,10 +230,13 @@ This guide outlines the steps required to run the application, which consists of
 ## Current Features & Future Plans
 
 **Currently available via API**:
-- Execute the full ETL process using a Spark cluster (S3 input/output, MongoDB artifact storage)
 - Select top-performing stocks within a given timeframe
 - Health-check endpoint for MongoDB connectivity
 - Retrieve ETL artifacts from MongoDB
+
+**Spark operator on k8s**:
+- ETL process is now triggerd by applying SparkApplication manifest
+- It executes full ETL process using a Spark operator (S3 input/output, MongoDB artifact storage)
 
 **Additional functionality**:
 - Debug Spark jobs using the integrated Spark History Server
@@ -208,6 +248,8 @@ This guide outlines the steps required to run the application, which consists of
   - And more...
 
 **Coming soon**:
+- Apache Airflow implementation to automate ETL process (Any new file is uploaded to `rawstockdata` in S3 -> ETL will be triggered)
+- Spark history for spark-operator
 - Jupyter Notebook integration within the Kubernetes cluster
 - Autoscaling for the Spark cluster
 - Spark Operator for job lifecycle management

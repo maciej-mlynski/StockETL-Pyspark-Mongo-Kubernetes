@@ -1,6 +1,6 @@
 from pyspark.sql.functions import year, month, input_file_name, regexp_extract, to_date, col, date_format, count, min, max, when
 from pyspark.sql.types import StructType, StructField, TimestampType, DoubleType, IntegerType
-from utils.date_transform import extract_date_from_path
+from ETL.utils.date_transform import extract_date_from_path
 from utils.stock_loader import StockLoader
 from db.stock_data_artifacts import StockDataArtifacts
 from db.etl_artifacts import ETLArtifacts
@@ -60,7 +60,7 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
                 .schema(self.raw_stock_schema) \
                 .csv(f"s3a://rawstockdata/{self.input_folder_path}/*")
         except Exception as e:
-            raise Exception(f"Could not load raw stock data from minio. Error: {e}")
+            raise Exception(f"Could not load raw stock data: {self.input_folder_path} from minio. Error: {e}")
 
         # 2. Verify that data was loaded.
         if df.rdd.isEmpty():
