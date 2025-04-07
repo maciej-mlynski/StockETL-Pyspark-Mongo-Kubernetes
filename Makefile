@@ -71,7 +71,6 @@ redeploy-spark:
 	./deployment/deploy_spark.sh
 	kubectl rollout restart deployment spark-master-deployment -n spark-namespace
 	kubectl rollout restart deployment spark-worker-deployment -n spark-namespace
-	kubectl rollout restart deployment spark-history-server -n spark-namespace
 
 redeploy-minio:
 	./deployment/deploy_minio.sh
