@@ -86,10 +86,10 @@ class StockDataArtifacts:
             print("Collection is empty or does not exist.")
             return {}
         # Get processed tickers from MongoDB with their oldest_date.
-        cursor = self.collection.find({}, {"_id": 0, "ticker": 1, "latest_date": 1})
+        cursor = self.collection.find({}, {"_id": 0, "ticker": 1, "latest_date": 1, "oldest_date": 1})
         processed_docs = list(cursor)
         # Build a dictionary: { ticker: newest_date }
-        return {doc["ticker"]: doc["latest_date"] for doc in processed_docs}
+        return {doc["ticker"]: {"latest_date": doc["latest_date"], "oldest_date": doc["oldest_date"]} for doc in processed_docs}
 
     def update_stock_artifacts(self, aggregated_df):
         """
@@ -106,10 +106,12 @@ class StockDataArtifacts:
         # Collect the aggregated data from Spark DataFrame to a list of Row objects
         records = aggregated_df.collect()
 
+        # For each record in input spark df
         for record in records:
             ticker = record["ticker"]
             row_count = record["row_count"]
-            latest_date = record["latest_date"]
+            latest_date_file = record["latest_date"]
+            oldest_date_file = record["oldest_date"]
 
             # Get the current UTC timestamp as a timezone-aware datetime object
             current_timestamp = datetime.now(timezone.utc)
@@ -117,13 +119,18 @@ class StockDataArtifacts:
             # Collect ticker doc from collection
             ticker_doc = self.collection.find_one({"ticker": ticker})
             if ticker_doc:
+
+                oldest_date_db = ticker_doc.get('oldest_date')
+                latest_data_db = ticker_doc.get('latest_date')
+
                 # Add row count from df to current row count
                 row_count = ticker_doc.get('row_count') + record["row_count"]
                 # Create the update document
                 update_doc = {
                     "$set": {
                         "row_count": row_count,
-                        "latest_date": latest_date,
+                        "latest_date": max(latest_date_file, latest_data_db),
+                        "oldest_date": min(oldest_date_file, oldest_date_db),
                         "last_update_date": current_timestamp
                     }
                 }
@@ -132,8 +139,8 @@ class StockDataArtifacts:
                 update_doc = {
                     "$set": {
                         "row_count": row_count,
-                        "latest_date": latest_date,
-                        "oldest_date": record["oldest_date"],
+                        "latest_date": latest_date_file,
+                        "oldest_date": oldest_date_file,
                         "last_update_date": current_timestamp
                     }
                 }
@@ -150,3 +157,11 @@ class StockDataArtifacts:
             return {}
         # Get processed tickers from MongoDB by ticker name
         return self.collection.find_one({"ticker": ticker_name})
+
+    def save_base_on_mode(self, mode, aggregated_df):
+        if mode == "overwrite":
+            self.add_first_stock_artifacts(aggregated_df)
+            return "First artifacts created successfully"
+        else:
+            self.update_stock_artifacts(aggregated_df)
+            return "Artifacts updated successfully"

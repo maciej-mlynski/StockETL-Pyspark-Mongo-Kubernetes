@@ -35,4 +35,8 @@ def extract_date_from_path(path: str):
     # Create a date object using the extracted year, month, and day.
     date_obj = datetime(year, month, day).date()
 
+    # If path contains historical -> return year, month as None -> all data will be loaded in this case
+    if "historical" in path:
+        return date_obj, None, None
+
     return date_obj, year, month

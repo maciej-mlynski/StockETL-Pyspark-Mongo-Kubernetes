@@ -1,4 +1,4 @@
-from pyspark.sql.functions import year, month, input_file_name, regexp_extract, to_date, col, date_format, count, min, max, when
+from pyspark.sql.functions import year, month, input_file_name, regexp_extract, to_date, col, date_format, count, min, max, lit
 from pyspark.sql.types import StructType, StructField, TimestampType, DoubleType, IntegerType
 from ETL.utils.date_transform import extract_date_from_path
 from utils.stock_loader import StockLoader
@@ -121,34 +121,40 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
         # Compute the maximum (latest) date for each ticker in stock_data.
         df_latest_dates = stock_data.groupBy("ticker").agg(max("date_time").alias("latest_date"))
         df_latest_dates_list = df_latest_dates.collect()
-
-        # Build a dictionary: { ticker: latest_date }
         df_latest_dates_dict = {row["ticker"]: row["latest_date"] for row in df_latest_dates_list}
+
+        # Compute the minimum (oldest) date for each ticker in stock_data.
+        df_oldest_dates = stock_data.groupBy("ticker").agg(min("date_time").alias("oldest_date"))
+        df_oldest_dates_list = df_oldest_dates.collect()
+        df_oldest_dates_dict = {row["ticker"]: row["oldest_date"] for row in df_oldest_dates_list}
 
         # Create sets of tickers from the DataFrame and MongoDB.
         tickers_df = set(df_latest_dates_dict.keys())
         tickers_mongo = set(mongo_ticker_dict.keys())
 
-        # New tickers: present in stock_data but not in MongoDB. Add it as global -> will be used later
+        # New tickers: present in stock_data but not in MongoDB.
         self.tickers_new = list(tickers_df - tickers_mongo)
 
         # Missing tickers: present in MongoDB but not in stock_data.
         tickers_missing = list(tickers_mongo - tickers_df)
 
-        # For tickers present in both, check if the max date from stock_data
-        # is less than or equal to the stored latest_date in MongoDB.
         tickers_update = []
         tickers_current = []
-        for ticker in tickers_df.intersection(tickers_mongo):
-            # Consider ticker current if stock_data's max date is less than or equal to MongoDB's latest_date.
-            if df_latest_dates_dict[ticker] <= mongo_ticker_dict[ticker]:
-                tickers_current.append(ticker)
-            else:
-                tickers_update.append(ticker)
 
-        # Filter out current tickers from stock_data.
+        for ticker in tickers_df.intersection(tickers_mongo):
+            mongo_latest = mongo_ticker_dict[ticker]["latest_date"]
+            mongo_oldest = mongo_ticker_dict[ticker]["oldest_date"]
+            stock_latest = df_latest_dates_dict[ticker]
+            stock_oldest = df_oldest_dates_dict[ticker]
+            if stock_latest > mongo_latest or stock_oldest < mongo_oldest:
+                tickers_update.append(ticker)
+            else:
+                tickers_current.append(ticker)
+
+        # Filter out up-to-date tickers from stock_data.
         filtered_df = stock_data.filter(~col("ticker").isin(tickers_current))
 
+        # If tickers to update & new tickers is empty -> skip write
         if not tickers_update and not self.tickers_new:
             self.skip_writing = True
             print("Data is up-to-date. Skipping write...")
@@ -199,31 +205,29 @@ class StockETL(StockLoader, StockDataArtifacts, ETLArtifacts):
                method, which upserts the aggregated data into the MongoDB collection.
                (The update_artifacts() method handles the MongoDB connection and saving of the data.)
         """
-        # If self.mode == "overwrite" -> First run -> Load entire table
-        if self.mode == "overwrite":
-            df = super().get_data(col_list=['ticker', 'date_time'])
-
-            # Save row_count, oldest_date, latest_date for each ticker in mongo db
-            aggregated_df = df.groupBy("ticker").agg(
-                count("*").alias("row_count"),
-                min("date_time").alias("oldest_date"),
-                max("date_time").alias("latest_date")
-            )
-            super().add_first_stock_artifacts(aggregated_df)
-            self.api_artifacts['StockDataArtifacts'] = "First artifacts created successfully"
-
-        # Else -> load only last month data
+        # If self.mode == "overwrite" -> First run or if self.year is None means that data is historical (in case this data wasn't added in first run) -> Load entire table
+        if self.mode == "overwrite" or self.year is None:
+            df = super().get_data(col_list=['ticker', 'date', 'date_time'])
+            df = df.filter(col("date") <= lit(self.date))
+        # For adding new data (if year is not None -> daily data
         else:
-            df = super().get_data(years=[self.year], months=[self.month], col_list=['ticker', 'date_time'])
+            df = super().get_data(years=[self.year], months=[self.month], col_list=['ticker', 'date', 'date_time'])
+            # Filter only single day data
+            df = df.filter(col("date") == lit(self.date))
 
-            # Save row_count, latest_date & oldest_date (only for new tickers) for each ticker in mongo db
-            aggregated_df = df.groupBy("ticker").agg(
-                count("*").alias("row_count"),
-                max("date_time").alias("latest_date"),
-                min(when(col("ticker").isin(self.tickers_new), col("date_time"))).alias("oldest_date")
-            )
-            super().update_stock_artifacts(aggregated_df)
-        self.api_artifacts['StockDataArtifacts'] = "Artifacts updated successfully"
+        # Drop date column
+        df = df.drop("date")
+
+        # Collect row count, latest date, and oldest date for each ticker on filtered stock data
+        aggregated_df = df.groupBy("ticker").agg(
+            count("*").alias("row_count"),
+            min("date_time").alias("oldest_date"),
+            max("date_time").alias("latest_date")
+        )
+
+        # Run method that trigger appropriate saving method base on saving mode -> returns the string explaining which method was chosen
+        stock_data_artifacts_resp = super().save_base_on_mode(self.mode, aggregated_df)
+        self.api_artifacts['StockDataArtifacts'] = stock_data_artifacts_resp
 
 
     def run_etl(self):
