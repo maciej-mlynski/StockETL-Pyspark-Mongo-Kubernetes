@@ -36,9 +36,9 @@ spec:
             name: minio-secret
             key: minio-secret-key
   executor:
-    cores: 2
+    cores: 3
     instances: 1
-    memory: "4g"
+    memory: "8g"
     env:
       - name: MONGO_URI
         value: "mongodb://mongo-service.stock-mongo-namespace.svc.cluster.local:27017/"
