@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# Input param (folder name) -> specific folder or all
+FOLDER_NAME="$1"
+
+if [ -z "$FOLDER_NAME" ]; then
+  echo "Error: No folder name provided."
+  echo "Usage: ./load_raw_data_minio.sh <folder_name>|all"
+  exit 1
+fi
+
+echo "WARNING: Each time this script is executed, existing data will be overwritten!"
+
 MINIO_ALIAS="myminio"
 RAW_BUCKET="rawstockdata"
 STOCK_BUCKET="stockdata"
@@ -13,39 +24,54 @@ MINIO_PASSWORD=$(kubectl get secret minio-secret -n $MINIO_NAMESPACE -o jsonpath
 
 # Start minikube service for minio
 minikube service $MINIO_SERVICE -n $MINIO_NAMESPACE --url > minio_url.txt &
-TUNNEL_PID=$!
 sleep 5
 
 # Get minio URLs from files
 MINIO_URL=$(head -n1 minio_url.txt)
-MINIO_UI_URL=$(sed -n '2p' minio_url.txt)
 
 # Set-up MinIO client
-mc alias set $MINIO_ALIAS "$MINIO_URL" $MINIO_USER $MINIO_PASSWORD
+mc alias set $MINIO_ALIAS "$MINIO_URL" "$MINIO_USER" "$MINIO_PASSWORD"
 
 # Create buckets
 mc mb --ignore-existing $MINIO_ALIAS/$RAW_BUCKET
 mc mb --ignore-existing $MINIO_ALIAS/$STOCK_BUCKET
 
-# Load each folder existing in $LOCAL_FOLDER_PATH
-for folder in "$LOCAL_FOLDER_PATH"/*; do
+upload_folder() {
+  local folder="$1"
   if [ -d "$folder" ]; then
-    echo "Loading data from: $folder"
+    echo "Loading folder from: $folder"
     mc cp --recursive "$folder" "$MINIO_ALIAS/$RAW_BUCKET/"
+  else
+    echo "Folder does not exist: $folder"
+    exit 1
   fi
-done
+}
+
+
+if [ "$FOLDER_NAME" == "all" ]; then
+  for folder in "$LOCAL_FOLDER_PATH"/*; do
+    [ -d "$folder" ] && upload_folder "$folder"
+  done
+else
+  upload_folder "$LOCAL_FOLDER_PATH/$FOLDER_NAME"
+fi
 
 echo "All data uploaded to MinIO."
 
-echo "Upload stats:"
+echo "MinIO rawstockdata bucket summary:"
 mc du --recursive $MINIO_ALIAS/$RAW_BUCKET/
 echo "Keep in mind that in MinIO UI you might see less objects than was actually loaded into S3."
 
-# Open minio UI
-echo "MinIO URLs"
-echo "MinIO API: $MINIO_URL"
-echo "MinIO UI: $MINIO_UI_URL"
+# Extract the port from MINIO_URL (assumes the URL is in the form http://<host>:<port>)
+PORT=$(echo "$MINIO_URL" | awk -F ':' '{print $NF}')
+echo "Identified port: $PORT"
 
-# Stop tunel
+# Find the PID of the process listening on that port
+PID_ON_PORT=$(lsof -t -i :"$PORT")
+echo "Closing the process listening on port $PORT (PID: $PID_ON_PORT)..."
+kill -9 "$PID_ON_PORT"
+
 rm -f minio_url.txt
-kill $TUNNEL_PID
+
+echo "If you want to open minio UI to see uploaded data run:"
+echo "make minio-ui"
