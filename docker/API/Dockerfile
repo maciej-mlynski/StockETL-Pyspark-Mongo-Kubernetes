@@ -23,8 +23,12 @@ WORKDIR /app
 COPY docker/API/requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Coppy all files from root dir
-COPY .. .
+# Coppy required files from root dir
+COPY ./reports ./reports
+COPY ./routers ./routers
+COPY ./utils ./utils
+COPY ./db ./db
+COPY main.py main.py
 
 USER spark
 
