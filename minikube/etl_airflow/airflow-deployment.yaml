@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+  namespace: airflow
+  labels:
+    app: airflow
+    component: webserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: webserver
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: webserver
+    spec:
+      serviceAccountName: airflow-sa
+      containers:
+      - name: airflow-webserver
+        image: airflow-stock:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8081
+        env:
+          - name: AIRFLOW__WEBSERVER__WEB_SERVER_PORT
+            value: "8081"
+          - name: AIRFLOW__CORE__EXECUTOR
+            value: "LocalExecutor"
+          - name: AIRFLOW__CORE__FERNET_KEY
+            value: "c_NC6Ax4J5uAeALNYSmS3T6rU2jmk4ysfQ7mYbStHZo="
+          - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
+            value: "postgresql+psycopg2://airflow:airflow@postgres-service.airflow.svc.cluster.local:5432/airflow"
+          - name: AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION
+            value: "False"
+          - name: MONGO_URI
+            value: "mongodb://mongo-service.stock-mongo-namespace.svc.cluster.local:27017/"
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: minio-access-key
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: minio-secret-key
+          - name: MINIO_ENDPOINT
+            value: "http://minio-service.minio-dev.svc.cluster.local:6544"
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            airflow db migrate &&
+            airflow users create \
+              --username admin \
+              --firstname Airflow \
+              --lastname Admin \
+              --role Admin \
+              --email admin@example.com \
+              --password admin || true &&
+            airflow webserver
+#        volumeMounts:
+#          # Optionally mount logs so we can share logs with scheduler
+#          - name: airflow-logs
+#            mountPath: /opt/airflow/logs
+#      volumes:
+#        - name: airflow-logs
+#          persistentVolumeClaim:
+#            claimName: airflow-logs-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver-svc
+  namespace: airflow
+spec:
+  type: NodePort
+  ports:
+    - port: 8081
+      targetPort: 8081
+  selector:
+    app: airflow
+    component: webserver

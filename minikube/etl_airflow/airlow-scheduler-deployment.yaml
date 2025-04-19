@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+  namespace: airflow
+  labels:
+    app: airflow
+    component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: scheduler
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: scheduler
+    spec:
+      serviceAccountName: airflow-sa
+      containers:
+      - name: airflow-scheduler
+        image: airflow-stock:latest
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: AIRFLOW__CORE__EXECUTOR
+            value: "LocalExecutor"
+          - name: AIRFLOW__CORE__FERNET_KEY
+            value: "c_NC6Ax4J5uAeALNYSmS3T6rU2jmk4ysfQ7mYbStHZo="
+          - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
+            value: "postgresql+psycopg2://airflow:airflow@postgres-service.airflow.svc.cluster.local:5432/airflow"
+          - name: MONGO_URI
+            value: "mongodb://mongo-service.stock-mongo-namespace.svc.cluster.local:27017/"
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: minio-access-key
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: minio-secret-key
+          - name: MINIO_ENDPOINT
+            value: "http://minio-service.minio-dev.svc.cluster.local:6544"
+        command: ["airflow", "scheduler"]
