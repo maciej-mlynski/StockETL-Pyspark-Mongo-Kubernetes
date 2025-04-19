@@ -1,10 +1,12 @@
 # Project Installation & Deployment
 
 This guide outlines the steps required to run the application, which consists of:
-- A **MinIO** instance for storing raw data (S3-compatible object storage).
-- A **MongoDB** instance for database storage.
-- A **FastAPI** application that interacts with both MongoDB and MinIO.
-- A **Spark** transformation engine with a log server.
+- **MinIO** instance for storing raw data (S3-compatible object storage).
+- **MongoDB** instance for database storage.
+- **FastAPI** application that interacts with ETL artifacts (MongoDB) and processed Stock Data (MinIO).
+- **Spark** transformation engine for APIs with a log server.
+- **Spark-Operator** dynamic transformation engine for ETL processes.
+- **Airflow** actively watch `rawstockdata` bucket and trigger ETL process for new folders detected.
 
 ---
 
@@ -35,7 +37,22 @@ This guide outlines the steps required to run the application, which consists of
    ```
 
 ---
+## Docker images
+Features in StockETL-Pyspark-Mongo-Kubernetes are build in 3 different ways:
+1) With my-docker images:
+   - API scripts (python:3.12-bookworm)
+   - ETL script (bitnami/spark:3.5.5)
+   - Airflow (apache/airflow:2.10.5-python3.12)
+2) With external-docker images:
+   - spark-master (bitnami)
+   - spark-worker (bitnami)
+   - spark-logs (bitnami)
+   - minio (minio/minio)
+   - mongo (mongo:6.0)
+3) With Helm:
+   - Spark-operator
 
+---
 ## Set Up MinIO Credentials
 
 1. **Generate base64-encoded username and password**:
@@ -85,25 +102,13 @@ This guide outlines the steps required to run the application, which consists of
 
 3. **Verify pods**:
 
-   a) FastAPI, MongoDB, Spark History:
-
    ```
-   kubectl get pods -n stock-etl-namespace / make check-app
+   kubectl get pods -A
    ```
+You should see sth like this:
 
-   b) Spark:
+![A helpful diagram](./IMAGES/pods.jpeg)
 
-   ```
-   kubectl get pods -n spark-namespace
-   ```
-
-   c) MinIO:
-
-   ```
-   kubectl get pods -n minio-dev
-   ```
-
-> You can also deploy each component individually by following the instructions in `deployment/README.md`.
 
 ---
 
@@ -115,59 +120,102 @@ This guide outlines the steps required to run the application, which consists of
    chmode -x load_raw_data_minio.sh
    ```
 
-2. **Run the data upload**:
+2. **Run the data upload with argument**:
+
+   a) Upload single folder with:
 
    ```
-   ./load_raw_data_minio.sh
+   ./load_raw_data_minio.sh <FOLDER_NAME>
+   ```
+   b) Upload all files with:
+   ```
+   ./load_raw_data_minio.sh ALL
    ```
 
 3. **Access the MinIO UI**:
 
    ```
-   minikube service minio-service -n minio-dev
+   make minio-ui
    ```
+   Use credentials you set up in the first step
 
 ---
 
-## Running Stock ETL with spark-operator
+## Turn on ETL airflow
 
-1. **Before you run ETL you should make sure that raw stock data is already in S3**:
-    ```
-    minikube service minio-service -n minio-dev
-    ```
-2. **Change the input_folder_name in `minikube/etl/spark-etl-job.yaml`**:
+1) Open airflow UI with:
+   ```
+   make airflow-ui
+   ```
+2) Use creds: admin, admin -> unless you change updated the `airflow-deployment.yaml`
+3) Tab in browser should be automatically open:
+![A helpful diagram](./IMAGES/airflow.jpeg)
 
-   - By default, the argument is set to `stocks_historical_to_2025_02_04`
-   - You should run this process 4 times in order to process each input folder separately
-   - The next file you should run on is `stocks_2025_02_05`, etc.
+4) Unpause DAG by clicking toggle
 
-3. **In order to run ETL with spark operator you should apply manifest by**:
-   ```
-   kubectl apply -f minikube/etl/spark-etl-job.yaml -n spark-jobs
-    ```
+## DAG step-by-step:
 
-4. **In order to see the pods run**:
+1) DAG is run every 30 second.
+2) It watches folders in `rawstockdata` bucket.
+3) If it finds new folder the ETL process begun.
+4) DAG apply spark-operator-etl-job manifest with argument of new folder name.
+5) Only after Spark-job is successful DAG update MongoDB!
+6) It adds new folder to `processed_folders` in MongoDB (This folder will not be seen as new folder next time).
+7) DAG process will be completed only after all steps are successful.
+8) DAG will not start another process in parallel.
+
+**find_new_folder description:**
+
+1. Scans the MinIO bucket (`rawstockdata`) for all available folder names.  
+2. Retrieves the list of already processed folders and any `skip_dates` from MongoDB.  
+3. If no folder has been processed yet, selects the folder with the **oldest** date.  
+4. Otherwise, only considers folders dated **one business day before or after** the most recently processed date (skipping weekends and any `skip_dates`).  
+5. If no folder meets these criteria, the task is **skipped**.
+
+All downstream tasks (Spark manifest templating, submission, MongoDB update) execute **only** when a new folder is successfully selected.
+
+> User can add/remove skip_dates via API to skip missing data -> will be explained in API section
+
+## ETL-DAG validation:
+
+1) See the DAG logs in terminal:
    ```
-   kubectl get pods -n spark-jobs
-    ```
-5. **In order to see ETL logs/results you can run**:
+   make airflow-artefacts
    ```
-   kubectl logs spark-stock-etl-driver -n spark-jobs -f
-   kubectl describe sparkapplication spark-stock-etl -n spark-jobs
+2) Run `ls` and move to the first folder for e.g: `cd run_id=scheduled__2025-04-19T08:03:00+00:00`
+
+3) Now you can see each step of ETL DAG:
+![A helpful diagram](./IMAGES/dags.jpeg)
+
+4) Open the files inside each folder and see the logs.
+
+5) You can also look at spark-operator job logs by running:
    ```
+   make log-etl ID=<RUN_ID>
+   ```
+   You can find the `RUN_ID` in 'task_id=wait_for_spark_job' folder! But for the first run it should be 0
+
+6) Open Minio and see if `stockdata` bucket has some data:
+```
+   make minio-ui
+   ```
+![A helpful diagram](./IMAGES/minio.jpeg)
+You can immediately see that prepared stock data is better compressed.
+
 
 ---
 ## Running the APIs
 
-1. **Start the Kubernetes application**:
+1. Start the Kubernetes application:
 
    ```
-   minikube service stock-etl-service -n stock-etl-namespace
+   make run-api
    ```
 
-2. **Open the second URL displayed in the terminal output.**
+2. Open the second URL displayed in the terminal output.
+![A helpful diagram](./IMAGES/api.jpeg)
 
-3. **Access the Swagger UI to explore available APIs.**
+
    
 ### Mongo
 1. check_mongo_sever
@@ -175,6 +223,13 @@ This guide outlines the steps required to run the application, which consists of
 3. get_stock_artifacts_by_ticker_name
 
 > This APIs can help you validate the ETL results
+
+### AirflowMongo
+1. get_airflow_artifacts_collection
+2. add_skip_date_to_airflow
+3. remove_skip_date_from_airflow
+
+> This APIs can help you to communicate with Airflow DAG source db
 
 ### Reports
 1. get_top_stocks
@@ -187,7 +242,7 @@ This guide outlines the steps required to run the application, which consists of
 1. **Forward the Spark UI port in your terminal**:
 
    ```
-   kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
+   make fwd-spark
    ```
 
 2. **Open the following URL in your web browser**:
@@ -195,8 +250,11 @@ This guide outlines the steps required to run the application, which consists of
    ```
    127.0.0.1:8080
    ```
+   
+3. **See the Spark History Server**
+![A helpful diagram](./IMAGES/spark-history.jpeg)
 
-3. **In the Spark UI, you can monitor**:
+4. **In the Spark UI, you can monitor**:
    - Available workers and their resources
    - Active applications
    - Completed job runs
@@ -233,9 +291,10 @@ Keep in mind that if you didn't run get_top_stocks API you may not see anything 
 - Select top-performing stocks within a given timeframe
 - Health-check endpoint for MongoDB connectivity
 - Retrieve ETL artifacts from MongoDB
+- Communicate with Airflow source DB collection
 
 **Spark operator on k8s**:
-- ETL process is now triggerd by applying SparkApplication manifest
+- ETL process is now triggerd by Airflow-DAG (applying SparkApplication manifest with appropriate folder name)
 - It executes full ETL process using a Spark operator (S3 input/output, MongoDB artifact storage)
 
 **Additional functionality**:
@@ -247,10 +306,8 @@ Keep in mind that if you didn't run get_top_stocks API you may not see anything 
   - Managing Kubernetes namespaces  
   - And more...
 
-**Coming soon**:
-- Apache Airflow implementation to automate ETL process (Any new file is uploaded to `rawstockdata` in S3 -> ETL will be triggered)
+**Future improvements**:
 - Spark history for spark-operator
 - Jupyter Notebook integration within the Kubernetes cluster
 - Autoscaling for the Spark cluster
-- Spark Operator for job lifecycle management
-- Apache Airflow for ETL pipeline scheduling and orchestration
+- Apache Iceberg layer for the `stockdata` bucket – a metadata‑driven table format that adds ACID snapshots to our stock data S3/MinIO objects, letting us time‑travel and roll back to a consistent version whenever an ETL run fails. 
