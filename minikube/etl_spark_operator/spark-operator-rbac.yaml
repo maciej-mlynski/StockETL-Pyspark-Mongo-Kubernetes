@@ -40,3 +40,13 @@ subjects:
 - kind: ServiceAccount
   name: spark
   namespace: spark-jobs
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: spark-jobs
+  name: airflow-spark-role
+rules:
+- apiGroups: ["sparkoperator.k8s.io"]
+  resources: ["sparkapplications"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
