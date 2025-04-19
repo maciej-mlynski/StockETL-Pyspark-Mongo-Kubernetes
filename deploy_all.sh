@@ -11,7 +11,7 @@ chmod +x deployment/deploy_minio.sh
 
 echo
 echo "Deploying Spark cluster..."
-chmod +x deployment/deploy_spark.sh
+chmod +x deployment/deploy_spark_cluster.sh
 ./deployment/deploy_spark.sh
 
 echo
@@ -25,6 +25,11 @@ chmod +x deployment/deploy_api.sh
 ./deployment/deploy_api.sh
 
 echo
-echo "Deploying ETL app..."
-chmod +x deployment/deploy_etl.sh
-./deployment/deploy_etl.sh
+echo "Deploying Spark Operator for ETL..."
+chmod +x deployment/deploy_etl_spark_operator.sh
+./deployment/deploy_etl_spark_operator.sh
+
+echo
+echo "Deploying Airflow for ETL..."
+chmod +x deployment/deploy_etl_airflow.sh
+./deployment/deploy_etl_airflow.sh
