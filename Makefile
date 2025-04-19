@@ -36,7 +36,7 @@ fwd-spark:
 	kubectl port-forward deployment/spark-master-deployment 8080:8080 -n spark-namespace
 
 redeploy-spark:
-	./deployment/deploy_spark.sh
+	./deployment/deploy_spark_cluster.sh
 	kubectl rollout restart deployment spark-master-deployment -n spark-namespace
 	kubectl rollout restart deployment spark-worker-deployment -n spark-namespace
 
@@ -95,7 +95,7 @@ log-airflow:
 	kubectl logs deployment/airflow-webserver -n airflow
 
 airflow-artefacts:
-	kubectl exec -it deployment/airflow-scheduler -n airflow -- /bin/bash
+	kubectl exec -it deployment/airflow-scheduler -n airflow -- bash -c "cd /opt/airflow/logs && cd 'dag_id=spark_etl_dag' && exec bash"
 
 redeploy-etl:
 	./deployment/deploy_etl_spark_operator.sh
