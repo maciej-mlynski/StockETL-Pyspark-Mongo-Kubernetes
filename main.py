@@ -6,6 +6,7 @@ from routers.etl_artifacts import router as etl_artifacts_router
 from routers.stock_artifacts import router as stock_artifacts_router
 from routers.test_endpoints import router as test_routers
 from routers.top_stocks import router as top_stocks_router
+from routers.airflow_artefacts import router as airflow_routers
 
 
 app = FastAPI(
@@ -34,6 +35,7 @@ async def check_mongo_sever():
 
 
 # Include the router from the routers folder
+app.include_router(airflow_routers, prefix="/api", tags=["AirflowMongo"])
 app.include_router(etl_artifacts_router, prefix="/api", tags=["Mongo"])
 app.include_router(stock_artifacts_router, prefix="/api", tags=["Mongo"])
 app.include_router(test_routers, prefix="/api", tags=["TestEndpoints"])
