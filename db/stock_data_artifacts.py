@@ -18,7 +18,7 @@ class StockDataArtifacts:
         check_mongo_server()
         self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
-        self.collection = self.db[collection_name]
+        self.stock_collection = self.db[collection_name]
 
     def add_first_stock_artifacts(self, aggregated_df):
         """
@@ -61,16 +61,16 @@ class StockDataArtifacts:
             }
 
             # Update the document for this ticker. Upsert = True will insert if the document doesn't exist.
-            self.collection.update_one({"ticker": ticker}, update_doc, upsert=True)
+            self.stock_collection.update_one({"ticker": ticker}, update_doc, upsert=True)
 
         print("Initial stock data artifacts added successfully.")
 
         # Create an index on the "ticker" field in the StockDataArtifacts collection
-        index_result = self.collection.create_index([("ticker", 1)])
+        index_result = self.stock_collection.create_index([("ticker", 1)])
         print("Created index on StockDataArtifacts:", index_result)
 
         # Optionally, create a compound index on "ticker" and "newest_date"
-        compound_index = self.collection.create_index([("ticker", 1), ("latest_date", 1)])
+        compound_index = self.stock_collection.create_index([("ticker", 1), ("latest_date", 1)])
         print("Created compound index on StockDataArtifacts:", compound_index)
 
     def export_ticker_data_from_mongo(self):
@@ -82,11 +82,11 @@ class StockDataArtifacts:
             dict: Mapping of ticker to latest_date.
         """
         # Check if the collection contains any documents
-        if self.collection.count_documents({}) == 0:
+        if self.stock_collection.count_documents({}) == 0:
             print("Collection is empty or does not exist.")
             return {}
         # Get processed tickers from MongoDB with their oldest_date.
-        cursor = self.collection.find({}, {"_id": 0, "ticker": 1, "latest_date": 1, "oldest_date": 1})
+        cursor = self.stock_collection.find({}, {"_id": 0, "ticker": 1, "latest_date": 1, "oldest_date": 1})
         processed_docs = list(cursor)
         # Build a dictionary: { ticker: newest_date }
         return {doc["ticker"]: {"latest_date": doc["latest_date"], "oldest_date": doc["oldest_date"]} for doc in processed_docs}
@@ -117,7 +117,7 @@ class StockDataArtifacts:
             current_timestamp = datetime.now(timezone.utc)
 
             # Collect ticker doc from collection
-            ticker_doc = self.collection.find_one({"ticker": ticker})
+            ticker_doc = self.stock_collection.find_one({"ticker": ticker})
             if ticker_doc:
 
                 oldest_date_db = ticker_doc.get('oldest_date')
@@ -146,17 +146,17 @@ class StockDataArtifacts:
                 }
 
             # Update the document for this ticker. Upsert = True will insert if the document doesn't exist.
-            self.collection.update_one({"ticker": ticker}, update_doc, upsert=True)
+            self.stock_collection.update_one({"ticker": ticker}, update_doc, upsert=True)
 
         print("StockData Artifacts updated successfully.")
 
     def get_stock_artifacts_by_ticker_name(self, ticker_name):
         # Check if the collection contains any documents
-        if self.collection.count_documents({}) == 0:
+        if self.stock_collection.count_documents({}) == 0:
             print("Collection is empty or does not exist.")
             return {}
         # Get processed tickers from MongoDB by ticker name
-        return self.collection.find_one({"ticker": ticker_name})
+        return self.stock_collection.find_one({"ticker": ticker_name})
 
     def save_base_on_mode(self, mode, aggregated_df):
         if mode == "overwrite":
