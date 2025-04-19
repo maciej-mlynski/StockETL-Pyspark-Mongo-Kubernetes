@@ -13,9 +13,9 @@ kubectl create namespace spark-namespace
 
 #3. Apply Kubernetes manifests for Spark (bitnami/spark:3.5.5 image used)
 echo "Applying Spark-master manifests from bitnami/spark:3.5.5..."
-kubectl apply -f minikube/spark/spark-master-deployment.yaml
+kubectl apply -f minikube/spark_cluster/spark-master-deployment.yaml
 echo "Applying Spark-worker manifests from bitnami/spark:3.5.5..."
-kubectl apply -f minikube/spark/spark-worker-deployment.yaml
+kubectl apply -f minikube/spark_cluster/spark-worker-deployment.yaml
 
 #4. Check pods
 echo "Checking pods in 'spark-namespace'..."

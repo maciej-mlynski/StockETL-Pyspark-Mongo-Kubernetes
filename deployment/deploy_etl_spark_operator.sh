@@ -2,7 +2,7 @@
 set -e
 
 echo "Deleting spark for ETL namespaces (if exists)..."
-kubectl delete sparkapplication spark-stock-etl -n spark-jobs || true
+kubectl delete sparkapplication spark-stock-etl-job -n spark-jobs || true
 kubectl delete namespace spark-operator --ignore-not-found
 kubectl delete namespace spark-jobs --ignore-not-found
 
@@ -37,7 +37,7 @@ echo "Creating spark-jobs service account..."
 kubectl create serviceaccount spark -n spark-jobs
 
 echo "Applying RBAC for spark-operator..."
-kubectl apply -f minikube/etl/spark-operator-rbac.yaml
+kubectl apply -f minikube/etl_spark_operator/spark-operator-rbac.yaml
 
 echo "Adding Mino secrets to spark-jobs..."
 kubectl delete secret minio-secret -n spark-jobs --ignore-not-found
@@ -46,12 +46,4 @@ kubectl get secret minio-secret -n minio-dev -o yaml \
   | kubectl apply -f -
 
 echo "Environment is ready to perform first ETL process!"
-echo "WARNING! Load raw data into S3, before execution"
-
-echo "To start ETL apply manifest by:"
-echo "kubectl apply -f minikube/etl/spark-etl-job.yaml -n spark-jobs"
-
-echo
-echo "Check ETL status:"
-echo "kubectl get pods -n spark-jobs"
-echo "kubectl describe sparkapplication spark-stock-etl -n spark-jobs"
+echo "WARNING! Load raw data into S3 to trigger ETL"
