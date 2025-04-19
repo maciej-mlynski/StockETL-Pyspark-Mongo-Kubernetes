@@ -12,7 +12,7 @@ chmod +x deployment/deploy_minio.sh
 echo
 echo "Deploying Spark cluster..."
 chmod +x deployment/deploy_spark_cluster.sh
-./deployment/deploy_spark.sh
+./deployment/deploy_spark_cluster.sh
 
 echo
 echo "Deploying Mongo db..."
